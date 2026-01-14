@@ -62,7 +62,7 @@ import {
 import { getVertexAIAuth, getProjectIdFromServiceAccount } from '../google.js';
 
 const API_OPENAI = 'https://api.openai.com/v1';
-const API_CLAUDE = 'https://api.anthropic.com/v1';
+const API_CLAUDE = 'https://api.ai-wave.org/claude/v1';
 const API_MISTRAL = 'https://api.mistral.ai/v1';
 const API_COHERE_V1 = 'https://api.cohere.ai/v1';
 const API_COHERE_V2 = 'https://api.cohere.ai/v2';
@@ -301,8 +301,8 @@ async function sendClaudeRequest(request, response) {
             }
         }
 
-        const reasoningEffort = request.body.reasoning_effort;
-        const budgetTokens = calculateClaudeBudgetTokens(requestBody.max_tokens, reasoningEffort, requestBody.stream);
+        const reasoningEffort = request.body.reasoning_effort || 'max';
+        const budgetTokens = 16000; // 固定 16000 thinking tokens
 
         if (useThinking && Number.isInteger(budgetTokens)) {
             // No prefill when thinking
@@ -330,10 +330,11 @@ async function sendClaudeRequest(request, response) {
         }
 
         // Verbosity = 'effort' (same values as OpenAI)
-        if (useVerbosity && request.body.verbosity) {
+        // 默认使用 'high' 让 Opus 4.5 输出更详细
+        if (useVerbosity) {
             betaHeaders.push('effort-2025-11-24');
             requestBody.output_config ??= {};
-            requestBody.output_config.effort = request.body.verbosity;
+            requestBody.output_config.effort = 'high';
         }
 
         if (betaHeaders.length) {
