@@ -62,7 +62,7 @@ import {
 import { getVertexAIAuth, getProjectIdFromServiceAccount } from '../google.js';
 
 const API_OPENAI = 'https://api.openai.com/v1';
-const API_CLAUDE = 'https://api.ai-wave.org/claude/v1';
+const API_CLAUDE = 'https://api2.ai-wave.org/claude/v1';
 const API_MISTRAL = 'https://api.mistral.ai/v1';
 const API_COHERE_V1 = 'https://api.cohere.ai/v1';
 const API_COHERE_V2 = 'https://api.cohere.ai/v2';
