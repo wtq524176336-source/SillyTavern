@@ -879,14 +879,7 @@
                 "identifier": "worldInfoBefore",
                 "name": "World Info (before)",
                 "system_prompt": true,
-                "marker": true,
-                "role": "system",
-                "content": "",
-                "injection_position": 0,
-                "injection_depth": 4,
-                "injection_order": 100,
-                "injection_trigger": [],
-                "forbid_overrides": false
+                "marker": true
             },
             {
                 "identifier": "enhanceDefinitions",
@@ -1469,11 +1462,11 @@
                     },
                     {
                         "identifier": "3e58ed08-f8f7-4716-952b-36924fb57d8d",
-                        "enabled": false
+                        "enabled": true
                     },
                     {
                         "identifier": "10675804-7099-4ac2-94d3-73d098d3b820",
-                        "enabled": false
+                        "enabled": true
                     },
                     {
                         "identifier": "cdbea6b8-9a70-468b-bfdd-6d5452aa2376",
@@ -1675,8 +1668,8 @@
         "azure_deployment_name": "",
         "azure_api_version": "2024-02-15-preview",
         "azure_openai_model": "",
-        "custom_model": "claude-opus-4-5-20251101-thinking",
-        "custom_url": "https://www.ggwk1.online/v1",
+        "custom_model": "[AZ]Claude-4.5-Opus【6】",
+        "custom_url": "https://ai.nyabit.com/v1",
         "custom_include_body": "",
         "custom_exclude_body": "",
         "custom_include_headers": "",
@@ -1688,7 +1681,7 @@
         "openrouter_allow_fallbacks": true,
         "openrouter_middleout": "on",
         "reverse_proxy": "",
-        "chat_completion_source": "claude",
+        "chat_completion_source": "custom",
         "max_context_unlocked": true,
         "show_external_models": true,
         "proxy_password": "sk-Bf1JjgXoJPQjZ1H_EqX00y8_XZQ3s03KJonUgUsrFSL2ZTotac3Xkb2V59Y",

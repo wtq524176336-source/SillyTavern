@@ -879,14 +879,7 @@
                 "identifier": "worldInfoBefore",
                 "name": "World Info (before)",
                 "system_prompt": true,
-                "marker": true,
-                "role": "system",
-                "content": "",
-                "injection_position": 0,
-                "injection_depth": 4,
-                "injection_order": 100,
-                "injection_trigger": [],
-                "forbid_overrides": false
+                "marker": true
             },
             {
                 "identifier": "enhanceDefinitions",
@@ -1469,11 +1462,11 @@
                     },
                     {
                         "identifier": "3e58ed08-f8f7-4716-952b-36924fb57d8d",
-                        "enabled": false
+                        "enabled": true
                     },
                     {
                         "identifier": "10675804-7099-4ac2-94d3-73d098d3b820",
-                        "enabled": false
+                        "enabled": true
                     },
                     {
                         "identifier": "cdbea6b8-9a70-468b-bfdd-6d5452aa2376",
