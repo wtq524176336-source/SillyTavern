@@ -1569,6 +1569,46 @@ export async function deleteMessage(id, swipeDeletionIndex = undefined, askConfi
     await eventSource.emit(event_types.MESSAGE_DELETED, chat.length);
 }
 
+/**
+ * Deletes a message and all messages below it from the chat.
+ * @param {number} id The ID of the message to delete from.
+ * @param {boolean} [askConfirmation=false] Whether to ask for confirmation before deleting.
+ */
+async function deleteMessagesFrom(id, askConfirmation = false) {
+    closeMessageEditor();
+    const messageElement = chatElement.find(`.mes[mesid="${id}"]`);
+    if (messageElement.length === 0) {
+        return;
+    }
+
+    if (askConfirmation) {
+        const result = await callGenericPopup(t`Delete this message and all below?`, POPUP_TYPE.CONFIRM, null, {
+            okButton: t`Delete Messages`,
+            cancelButton: 'Cancel',
+        });
+        if (!result) {
+            return;
+        }
+    }
+
+    messageElement.nextAll('div').remove();
+    messageElement.remove();
+    chat.length = id;
+    chat_metadata['tainted'] = true;
+
+    if (this_edit_mes_id >= id) {
+        this_edit_mes_id = undefined;
+    }
+
+    await saveChatConditional();
+    chatElement.scrollTop(chatElement[0].scrollHeight);
+    await eventSource.emit(event_types.MESSAGE_DELETED, chat.length);
+    chatElement.find('.mes').removeClass('last_mes');
+    chatElement.find('.mes').last().addClass('last_mes');
+    refreshSwipeButtons();
+    updateEditArrowClasses();
+}
+
 export async function reloadCurrentChat() {
     preserveNeutralChat();
     await clearChat();
@@ -11659,6 +11699,14 @@ jQuery(async function () {
         const swipesArray = Array.isArray(message['swipes']) ? message['swipes'] : [];
         const canDeleteSwipe = power_user.confirm_message_delete && !fromSlashCommand && !message.is_user && swipesArray.length > 1 && this_edit_mes_id === chat.length - 1 && selectedSwipe !== undefined;
         await deleteMessage(Number(this_edit_mes_id), canDeleteSwipe ? selectedSwipe : undefined, power_user.confirm_message_delete && fromSlashCommand !== true);
+    });
+
+    $(document).on('click', '.mes_bulk_delete', async function () {
+        if (is_delete_mode) {
+            return;
+        }
+        const messageId = Number($(this).closest('.mes').attr('mesid'));
+        await deleteMessagesFrom(messageId, power_user.confirm_message_delete);
     });
 
     $(document).on('click', '.mes_edit_done', async function () {
