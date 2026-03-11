@@ -31,7 +31,7 @@ basicAuthUser:
   password: password
 enableCorsProxy: false
 requestProxy:
-  enabled: false
+  enabled: true
   url: http://127.0.0.1:16023
   bypass:
     - localhost
