@@ -43,7 +43,7 @@ import {
 } from './PromptManager.js';
 
 import { forceCharacterEditorTokenize, getCustomStoppingStrings, persona_description_positions, power_user } from './power-user.js';
-import { SECRET_KEYS, secret_state, writeSecret } from './secrets.js';
+import { rotateSecret, SECRET_KEYS, secret_state, writeSecret } from './secrets.js';
 
 import { getEventSourceStream } from './sse-stream.js';
 import {
@@ -426,6 +426,8 @@ const default_settings = {
     azure_openai_model: '',
     custom_model: '',
     custom_url: '',
+    custom_endpoint_presets: [{ name: 'None', url: '', secret_id: '' }],
+    selected_custom_endpoint_preset: 'None',
     custom_include_body: '',
     custom_exclude_body: '',
     custom_include_headers: '',
@@ -479,6 +481,14 @@ export let proxies = [
     },
 ];
 export let selected_proxy = proxies[0];
+export let custom_endpoint_presets = [
+    {
+        name: 'None',
+        url: '',
+        secret_id: '',
+    },
+];
+export let selected_custom_endpoint_preset = custom_endpoint_presets[0];
 
 export let openai_setting_names;
 export let openai_settings;
@@ -4034,6 +4044,7 @@ function loadOpenAISettings(data, settings) {
         $('#openai_logit_bias_preset').append(option);
     }
     $('#openai_logit_bias_preset').trigger('change');
+    loadCustomEndpointPresets(settings);
 
     setNamesBehaviorControls();
     setContinuePostfixControls();
@@ -6000,6 +6011,75 @@ export function loadProxyPresets(settings) {
     setProxyPreset(selected_proxy.name, selected_proxy.url, selected_proxy.password);
 }
 
+function getActiveCustomSecretId() {
+    const secrets = secret_state[SECRET_KEYS.CUSTOM];
+    if (!Array.isArray(secrets)) {
+        return '';
+    }
+
+    return secrets.find(secret => secret.active)?.id || '';
+}
+
+function updateCustomEndpointPresetControls() {
+    $('#custom_endpoint_preset').empty();
+
+    for (const preset of custom_endpoint_presets) {
+        const option = document.createElement('option');
+        option.innerText = preset.name;
+        option.value = preset.name;
+        $('#custom_endpoint_preset').append(option);
+    }
+
+    $('#custom_endpoint_preset').val(selected_custom_endpoint_preset.name);
+    $('#custom_endpoint_preset_name').val(selected_custom_endpoint_preset.name);
+}
+
+async function setCustomEndpointPreset(name, url, secretId) {
+    const preset = custom_endpoint_presets.find(p => p.name === name);
+    if (preset) {
+        preset.url = url;
+        preset.secret_id = secretId;
+        selected_custom_endpoint_preset = preset;
+    } else {
+        const newPreset = { name, url, secret_id: secretId };
+        custom_endpoint_presets.push(newPreset);
+        selected_custom_endpoint_preset = newPreset;
+    }
+
+    oai_settings.custom_url = url;
+    oai_settings.custom_endpoint_presets = custom_endpoint_presets;
+    oai_settings.selected_custom_endpoint_preset = name;
+    $('#custom_api_url_text').val(url);
+    $('#custom_endpoint_preset_name').val(name);
+    $('#custom_endpoint_preset').val(name);
+
+    if (secretId) {
+        await rotateSecret(SECRET_KEYS.CUSTOM, secretId);
+    }
+
+    reconnectOpenAi();
+}
+
+function loadCustomEndpointPresets(settings) {
+    const presets = settings.custom_endpoint_presets;
+    const selectedName = settings.selected_custom_endpoint_preset || 'None';
+
+    if (Array.isArray(presets) && presets.length > 0) {
+        custom_endpoint_presets = presets.map(preset => ({
+            name: preset.name || 'Unnamed',
+            url: preset.url || '',
+            secret_id: preset.secret_id || '',
+        }));
+    } else {
+        custom_endpoint_presets = [{ name: 'None', url: '', secret_id: '' }];
+    }
+
+    selected_custom_endpoint_preset = custom_endpoint_presets.find(preset => preset.name === selectedName) || custom_endpoint_presets[0];
+    oai_settings.custom_endpoint_presets = custom_endpoint_presets;
+    oai_settings.selected_custom_endpoint_preset = selected_custom_endpoint_preset.name;
+    updateCustomEndpointPresetControls();
+}
+
 function setProxyPreset(name, url, password) {
     const preset = proxies.find(p => p.name === name);
     if (preset) {
@@ -6029,6 +6109,19 @@ function onProxyPresetChange() {
     } else {
         console.error(t`Proxy preset '${value}' not found in proxies array.`);
     }
+    saveSettingsDebounced();
+}
+
+async function onCustomEndpointPresetChange() {
+    const value = String($('#custom_endpoint_preset').find(':selected').val());
+    const selectedPreset = custom_endpoint_presets.find(preset => preset.name === value);
+
+    if (!selectedPreset) {
+        console.error(t`Custom endpoint preset '${value}' not found.`);
+        return;
+    }
+
+    await setCustomEndpointPreset(selectedPreset.name, selectedPreset.url, selectedPreset.secret_id);
     saveSettingsDebounced();
 }
 
@@ -6077,6 +6170,46 @@ $('#delete_proxy').on('click', async function () {
     } else {
         toastr.error(t`Could not find proxy with name '${presetName}'`);
     }
+});
+
+$('#save_custom_endpoint_preset').on('click', async function () {
+    const presetName = String($('#custom_endpoint_preset_name').val()).trim() || 'Unnamed';
+    const customUrl = String($('#custom_api_url_text').val()).trim();
+    const apiKey = String($('#api_key_custom').val()).trim();
+    let secretId = getActiveCustomSecretId();
+
+    secretId = await writeSecret(SECRET_KEYS.CUSTOM, apiKey, presetName, { allowEmpty: true }) || secretId;
+
+    await setCustomEndpointPreset(presetName, customUrl, secretId);
+    updateCustomEndpointPresetControls();
+    saveSettingsDebounced();
+    toastr.success(t`Custom endpoint preset saved.`);
+});
+
+$('#delete_custom_endpoint_preset').on('click', async function () {
+    const presetName = String($('#custom_endpoint_preset_name').val()).trim();
+    const index = custom_endpoint_presets.findIndex(preset => preset.name === presetName);
+
+    if (index === -1) {
+        toastr.error(t`Could not find custom endpoint preset '${presetName}'`);
+        return;
+    }
+
+    custom_endpoint_presets.splice(index, 1);
+
+    if (custom_endpoint_presets.length === 0) {
+        custom_endpoint_presets = [{ name: 'None', url: '', secret_id: '' }];
+    }
+
+    selected_custom_endpoint_preset = custom_endpoint_presets[Math.max(0, index - 1)] || custom_endpoint_presets[0];
+    await setCustomEndpointPreset(
+        selected_custom_endpoint_preset.name,
+        selected_custom_endpoint_preset.url,
+        selected_custom_endpoint_preset.secret_id,
+    );
+    updateCustomEndpointPresetControls();
+    saveSettingsDebounced();
+    toastr.success(t`Custom endpoint preset deleted.`);
 });
 
 function runProxyCallback(_, value) {
@@ -6776,6 +6909,7 @@ export function initOpenAI() {
 
     $('#api_button_openai').on('click', onConnectButtonClick);
     $('#openai_reverse_proxy').on('input', onReverseProxyInput);
+    $('#custom_endpoint_preset').on('change', onCustomEndpointPresetChange);
     $('#model_openai_select').on('change', onModelChange);
     $('#model_claude_select').on('change', onModelChange);
     $('#model_google_select').on('change', onModelChange);

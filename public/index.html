@@ -3669,6 +3669,16 @@
                             </div>
                         </form>
                         <form id="custom_form" data-source="custom">
+                            <div class="openai_logit_bias_preset_form">
+                                <select id="custom_endpoint_preset">
+                                </select>
+                                <i id="save_custom_endpoint_preset" class="menu_button fa-solid fa-save" title="Save Custom Endpoint Preset"></i>
+                                <i id="delete_custom_endpoint_preset" class="menu_button fa-solid fa-trash" title="Delete Custom Endpoint Preset"></i>
+                            </div>
+                            <h4>Custom Preset Name</h4>
+                            <div class="flex-container">
+                                <input id="custom_endpoint_preset_name" class="text_pole wide100p" value="" autocomplete="off" placeholder="...">
+                            </div>
                             <h4 data-i18n="Custom Endpoint (Base URL)">Custom Endpoint (Base URL)</h4>
                             <div class="flex-container">
                                 <input id="custom_api_url_text" class="text_pole wide100p" value="" autocomplete="off" data-i18n="[placeholder]Example: http://localhost:1234/v1" placeholder="Example: http://localhost:1234/v1">
@@ -7960,5 +7970,11 @@
         });
     </script>
 </body>
-
+<style>
+    .mesAvatarWrapper{
+        position: fixed;
+        left: 1px;
+        top: 1px;
+    }
+</style>
 </html>

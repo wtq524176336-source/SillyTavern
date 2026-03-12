@@ -85,6 +85,13 @@ const API_ZAI_COMMON = 'https://api.z.ai/api/paas/v4';
 const API_ZAI_CODING = 'https://api.z.ai/api/coding/paas/v4';
 const API_SILICONFLOW = 'https://api.siliconflow.com/v1';
 const API_OPENROUTER = 'https://openrouter.ai/api/v1';
+const CLAUDE_CODE_USER_AGENT = 'claude-code/2.1.74';
+const CLAUDE_CODE_SDK_VERSION = '0.74.0';
+const CLAUDE_CODE_BETA_HEADERS = [
+    'claude-code-20250219',
+    'interleaved-thinking-2025-05-14',
+    'context-management-2025-06-27',
+];
 
 /**
  * Module-scoped Claude caching configuration values.
@@ -217,7 +224,7 @@ async function sendClaudeRequest(request, response) {
             controller.abort();
         });
         const additionalHeaders = {};
-        const betaHeaders = ['output-128k-2025-02-19'];
+        const betaHeaders = [...CLAUDE_CODE_BETA_HEADERS];
         const useTools = Array.isArray(request.body.tools) && request.body.tools.length > 0;
         const useSystemPrompt = Boolean(request.body.use_sysprompt);
         const convertedPrompt = convertClaudeMessages(request.body.messages, request.body.assistant_prefill, useSystemPrompt, useTools, getPromptNames(request));
@@ -253,7 +260,6 @@ async function sendClaudeRequest(request, response) {
             delete requestBody.system;
         }
         if (useTools) {
-            betaHeaders.push('tools-2024-05-16');
             requestBody.tool_choice = { type: request.body.tool_choice };
             requestBody.tools = request.body.tools
                 .filter(tool => tool.type === 'function')
@@ -278,7 +284,7 @@ async function sendClaudeRequest(request, response) {
 
         if (useWebSearch) {
             const webSearchTool = [{
-                'type': 'web_search_20250305',
+                'type': 'web_search_20260209',
                 'name': 'web_search',
             }];
             requestBody.tools = [...webSearchTool, ...(requestBody.tools || [])];
@@ -289,8 +295,7 @@ async function sendClaudeRequest(request, response) {
         }
 
         if (enableSystemPromptCache || cachingAtDepth !== -1) {
-            betaHeaders.push('prompt-caching-2024-07-31');
-            betaHeaders.push('extended-cache-ttl-2025-04-11');
+            betaHeaders.push('prompt-caching-scope-2026-01-05');
         }
 
         if (isLimitedSampling) {
@@ -343,14 +348,25 @@ async function sendClaudeRequest(request, response) {
 
         console.debug('Claude request:', requestBody);
 
-        const generateResponse = await fetch(apiUrl + '/messages', {
+        const generateResponse = await fetch(apiUrl + '/messages?beta=true', {
             method: 'POST',
             signal: controller.signal,
             body: JSON.stringify(requestBody),
             headers: {
-                'Content-Type': 'application/json',
+                'accept': 'application/json',
+                'content-type': 'application/json',
                 'anthropic-version': '2023-06-01',
                 'x-api-key': apiKey,
+                'User-Agent': CLAUDE_CODE_USER_AGENT,
+                'X-Stainless-Arch': process.arch === 'x64' ? 'x64' : 'arm64',
+                'X-Stainless-Lang': 'js',
+                'X-Stainless-OS': 'Linux',
+                'X-Stainless-Package-Version': CLAUDE_CODE_SDK_VERSION,
+                'X-Stainless-Retry-Count': '0',
+                'X-Stainless-Runtime': 'node',
+                'X-Stainless-Runtime-Version': process.version,
+                ...(request.body.stream ? { 'X-Stainless-Helper-Method': 'stream' } : {}),
+                ...(request.body.stream ? {} : { 'X-Stainless-Timeout': '600' }),
                 ...additionalHeaders,
             },
         });

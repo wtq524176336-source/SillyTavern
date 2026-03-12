@@ -3439,6 +3439,8 @@ class StreamingProcessor {
         this.images = [];
         /** @type {string?} */
         this.reasoningSignature = null;
+        this.lastTokenCountUpdate = 0;
+        this.tokenCountRequestId = 0;
     }
 
     /**
@@ -3463,6 +3465,31 @@ class StreamingProcessor {
         if (this.messageDom instanceof HTMLElement && Array.isArray(this.toolCalls) && this.toolCalls.length > 0) {
             const shouldHide = ['', '...'].includes(this.result) && !this.reasoningHandler.reasoning;
             this.messageDom.classList.toggle('displayNone', shouldHide);
+        }
+    }
+
+    async #updateStreamingTokenCount(messageId, tokenCountText, force = false) {
+        const now = Date.now();
+        if (!force && now - this.lastTokenCountUpdate < 500) {
+            return;
+        }
+
+        this.lastTokenCountUpdate = now;
+        const requestId = ++this.tokenCountRequestId;
+        const tokenCount = await getTokenCountAsync(tokenCountText, 0);
+
+        if (requestId !== this.tokenCountRequestId || !chat[messageId]) {
+            return;
+        }
+
+        if (!chat[messageId]['extra']) {
+            chat[messageId]['extra'] = {};
+        }
+
+        chat[messageId]['extra']['token_count'] = tokenCount;
+
+        if (this.messageTokenCounterDom instanceof HTMLElement) {
+            this.messageTokenCounterDom.textContent = `${tokenCount}t`;
         }
     }
 
@@ -3550,12 +3577,19 @@ class StreamingProcessor {
 
             // Token count update.
             const tokenCountText = this.reasoningHandler.reasoning + processedText;
-            const currentTokenCount = isFinal && power_user.message_token_count_enabled ? await getTokenCountAsync(tokenCountText, 0) : 0;
-            if (currentTokenCount) {
-                chat[messageId]['extra']['token_count'] = currentTokenCount;
-                if (this.messageTokenCounterDom instanceof HTMLElement) {
-                    this.messageTokenCounterDom.textContent = `${currentTokenCount}t`;
-                }
+            if (!isFinal) {
+                void this.#updateStreamingTokenCount(messageId, tokenCountText);
+            }
+            else {
+                this.tokenCountRequestId++;
+            }
+
+            const currentTokenCount = isFinal
+                ? await getTokenCountAsync(tokenCountText, 0)
+                : (chat[messageId]['extra']['token_count'] ?? 0);
+            chat[messageId]['extra']['token_count'] = currentTokenCount;
+            if (this.messageTokenCounterDom instanceof HTMLElement) {
+                this.messageTokenCounterDom.textContent = `${currentTokenCount}t`;
             }
 
             if ((this.type == 'swipe' || this.type === 'continue') && Array.isArray(chat[messageId]['swipes'])) {
@@ -5697,9 +5731,7 @@ export async function sendMessageAsUser(messageText, messageBias, insertAt = nul
         },
     };
 
-    if (power_user.message_token_count_enabled) {
-        message.extra.token_count = await getTokenCountAsync(message.mes, 0);
-    }
+    message.extra.token_count = await getTokenCountAsync(message.mes, 0);
 
     // Lock user avatar to a persona.
     if (avatar in power_user.personas) {
@@ -6439,10 +6471,8 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
             chat[chat.length - 1]['extra']['reasoning_duration'] = null;
             chat[chat.length - 1]['extra']['reasoning_signature'] = reasoningSignature;
             await processImageAttachment(chat[chat.length - 1], { imageUrls });
-            if (power_user.message_token_count_enabled) {
-                const tokenCountText = (reasoning || '') + chat[chat.length - 1]['mes'];
-                chat[chat.length - 1]['extra']['token_count'] = await getTokenCountAsync(tokenCountText, 0);
-            }
+            const tokenCountText = (reasoning || '') + chat[chat.length - 1]['mes'];
+            chat[chat.length - 1]['extra']['token_count'] = await getTokenCountAsync(tokenCountText, 0);
             const chat_id = (chat.length - 1);
             !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
             addOneMessage(chat[chat_id], { type: 'swipe' });
@@ -6464,10 +6494,8 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
         chat[chat.length - 1]['extra']['reasoning_duration'] = null;
         chat[chat.length - 1]['extra']['reasoning_signature'] = reasoningSignature;
         await processImageAttachment(chat[chat.length - 1], { imageUrls });
-        if (power_user.message_token_count_enabled) {
-            const tokenCountText = (reasoning || '') + chat[chat.length - 1]['mes'];
-            chat[chat.length - 1]['extra']['token_count'] = await getTokenCountAsync(tokenCountText, 0);
-        }
+        const tokenCountText = (reasoning || '') + chat[chat.length - 1]['mes'];
+        chat[chat.length - 1]['extra']['token_count'] = await getTokenCountAsync(tokenCountText, 0);
         const chat_id = (chat.length - 1);
         !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
         addOneMessage(chat[chat_id], { type: 'swipe' });
@@ -6486,10 +6514,8 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
         chat[chat.length - 1]['extra']['reasoning_signature'] = reasoningSignature;
         await processImageAttachment(chat[chat.length - 1], { imageUrls });
         // We don't know if the reasoning duration extended, so we don't update it here on purpose.
-        if (power_user.message_token_count_enabled) {
-            const tokenCountText = (reasoning || '') + chat[chat.length - 1]['mes'];
-            chat[chat.length - 1]['extra']['token_count'] = await getTokenCountAsync(tokenCountText, 0);
-        }
+        const tokenCountText = (reasoning || '') + chat[chat.length - 1]['mes'];
+        chat[chat.length - 1]['extra']['token_count'] = await getTokenCountAsync(tokenCountText, 0);
         const chat_id = (chat.length - 1);
         !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
         addOneMessage(chat[chat_id], { type: 'swipe' });
@@ -10001,16 +10027,14 @@ export async function swipe(event, direction, { source, repeated, message = chat
             //The swipe buttons will be refreshed in endSwipe(), refreshing them now will cause flickering.
             addOneMessage(chat[mesId], { type: 'swipe', forceId: mesId, scroll: scroll, showSwipes: false });
 
-            if (power_user.message_token_count_enabled) {
-                if (!chat[mesId].extra) {
-                    chat[mesId].extra = {};
-                }
-
-                const tokenCountText = (chat[mesId]?.extra?.reasoning || '') + chat[mesId].mes;
-                const tokenCount = await getTokenCountAsync(tokenCountText, 0);
-                chat[mesId]['extra']['token_count'] = tokenCount;
-                thisMesDiv.find('.tokenCounterDisplay').text(`${tokenCount}t`);
+            if (!chat[mesId].extra) {
+                chat[mesId].extra = {};
             }
+
+            const tokenCountText = (chat[mesId]?.extra?.reasoning || '') + chat[mesId].mes;
+            const tokenCount = await getTokenCountAsync(tokenCountText, 0);
+            chat[mesId]['extra']['token_count'] = tokenCount;
+            thisMesDiv.find('.tokenCounterDisplay').text(`${tokenCount}t`);
         }
 
         //Animate expanding to the new message height.

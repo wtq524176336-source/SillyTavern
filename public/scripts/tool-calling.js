@@ -689,7 +689,7 @@ export class ToolManager {
         const getRandomId = () => Math.random().toString(36).substring(2);
         const isClaudeToolCall = c => Array.isArray(c) ? c.filter(x => x).every(isClaudeToolCall) : c?.input && c?.name && c?.id;
         const isGoogleToolCall = c => Array.isArray(c) ? c.filter(x => x).every(isGoogleToolCall) : c?.name && c?.args;
-        const convertClaudeToolCall = c => ({ id: c.id, function: { name: c.name, arguments: c.input } });
+        const convertClaudeToolCall = c => ({ id: getRandomId(), function: { name: c.name, arguments: c.input } });
         const convertGoogleToolCall = (c, signature = null) => ({ id: getRandomId(), function: { name: c.name, arguments: c.args }, signature });
 
         // Parsed tool calls from streaming data
