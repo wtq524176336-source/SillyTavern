@@ -277,6 +277,8 @@ export const power_user = {
         post_history: '',
     },
 
+    chat_system_prompt: '',
+
     reasoning: {
         name: DEFAULT_REASONING_TEMPLATE,
         auto_parse: false,

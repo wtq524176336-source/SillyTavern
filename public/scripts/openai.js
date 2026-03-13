@@ -9,6 +9,7 @@ import {
     abortStatusCheck,
     cancelStatusCheck,
     characters,
+    chat_metadata,
     event_types,
     eventSource,
     extension_prompt_roles,
@@ -1139,7 +1140,7 @@ async function populateChatCompletion(prompts, chatCompletion, { bias, quietProm
     chatCompletion.reserveBudget(controlPrompts);
 
     // Add ordered system and user prompts
-    const systemPrompts = ['nsfw', 'jailbreak'];
+    const systemPrompts = ['chatSystemPromptOverride', 'nsfw', 'jailbreak'];
     const userRelativePrompts = prompts.collection
         .filter((prompt) => false === prompt.system_prompt && prompt.injection_position !== INJECTION_POSITION.ABSOLUTE)
         .reduce((acc, prompt) => {
@@ -1393,14 +1394,15 @@ async function preparePromptsForChatCompletion({ scenario, charPersonality, name
         else prompts.add(newPrompt);
     });
 
-    // Apply character-specific main prompt
-    const systemPrompt = prompts.get('main') ?? null;
-    const isSystemPromptDisabled = promptManager.isPromptDisabledForActiveCharacter('main');
-    if (systemPromptOverride && systemPrompt && systemPrompt.forbid_overrides !== true && !isSystemPromptDisabled) {
-        const mainOriginalContent = systemPrompt.content;
-        systemPrompt.content = systemPromptOverride;
-        const mainReplacement = promptManager.preparePrompt(systemPrompt, mainOriginalContent);
-        prompts.override(mainReplacement, prompts.index('main'));
+    // Inject chat-specific system prompt as a dedicated system message.
+    if (systemPromptOverride) {
+        prompts.collection.unshift(promptManager.preparePrompt({
+            identifier: 'chatSystemPromptOverride',
+            name: 'Chat System Prompt',
+            role: 'system',
+            content: systemPromptOverride,
+            system_prompt: true,
+        }));
     }
 
     // Apply character-specific jailbreak
@@ -2618,8 +2620,9 @@ export async function createGenerationParameters(settings, model, type, messages
     }
 
     if (settings.chat_completion_source === chat_completion_sources.CLAUDE) {
+        const forceSystemPrompt = Boolean(power_user.chat_system_prompt || chat_metadata['system_prompt']);
         generate_data['top_k'] = Number(settings.top_k_openai);
-        generate_data['use_sysprompt'] = settings.use_sysprompt;
+        generate_data['use_sysprompt'] = settings.use_sysprompt || forceSystemPrompt;
         generate_data['stop'] = getCustomStoppingStrings(); // Claude shouldn't have limits on stop strings.
         // Don't add a prefill on quiet gens (summarization) and when using continue prefill.
         if (type !== 'quiet' && !(type === 'continue' && settings.continue_prefill)) {

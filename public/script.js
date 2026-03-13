@@ -3281,7 +3281,11 @@ export function getCharacterCardFieldsLazy({ chid = undefined } = {}) {
         persona: () => baseChatReplace(power_user.persona_description?.trim()),
         system: () => {
             if (!character) return '';
-            const systemPrompt = chat_metadata['system_prompt'] || character.data?.system_prompt || '';
+            const chatSystemPrompt = power_user.chat_system_prompt || chat_metadata['system_prompt'] || '';
+            if (chatSystemPrompt) {
+                return baseChatReplace(chatSystemPrompt.trim());
+            }
+            const systemPrompt = character.data?.system_prompt || '';
             return power_user.prefer_character_prompt ? baseChatReplace(systemPrompt.trim()) : '';
         },
         jailbreak: () => {
@@ -8753,7 +8757,7 @@ function updateFavButtonState(state) {
     $('#favorite_button').toggleClass('fav_off', !state);
 }
 
-export async function setCharacterSettingsOverrides() {
+export async function setCharacterSettingsOverrides(options = {}) {
     if (!selected_group && (this_chid === undefined || !characters[this_chid])) {
         console.warn('setCharacterSettingsOverrides() -- no selected group or character');
         return;
@@ -8787,6 +8791,12 @@ export async function setCharacterSettingsOverrides() {
         pendingChanges.system_prompt = String($(this).val());
     });
 
+    if (options.focusField === 'system_prompt') {
+        setTimeout(() => {
+            $systemPrompt.trigger('focus');
+        }, 0);
+    }
+
     $template.find('.remove_scenario_override').on('click', async function () {
         const confirm = await Popup.show.confirm(t`Are you sure you want to remove all overrides?`, t`This action cannot be undone.`);
         if (!confirm) {
@@ -8802,16 +8812,45 @@ export async function setCharacterSettingsOverrides() {
     });
 
     // Wait for popup close/confirm.
-    await callGenericPopup($template, POPUP_TYPE.TEXT, '', {
+    const popupResult = await callGenericPopup($template, POPUP_TYPE.CONFIRM, '', {
         wide: true,
         large: true,
         allowVerticalScrolling: true,
+        okButton: 'Save',
+        cancelButton: 'Cancel',
     });
+
+    if (popupResult !== POPUP_RESULT.AFFIRMATIVE) {
+        return;
+    }
 
     chat_metadata['scenario'] = pendingChanges.scenario;
     chat_metadata['mes_example'] = pendingChanges.examples;
     chat_metadata['system_prompt'] = pendingChanges.system_prompt;
     await saveMetadata();
+}
+
+async function openChatSystemPromptEditor() {
+    if (!selected_group && (this_chid === undefined || !characters[this_chid])) {
+        console.warn('openChatSystemPromptEditor() -- no selected group or character');
+        return;
+    }
+
+    const systemPromptValue = power_user.chat_system_prompt || chat_metadata['system_prompt'] || '';
+    const result = await callGenericPopup('<h3>Chat System Prompt</h3>', POPUP_TYPE.INPUT, systemPromptValue, {
+        rows: 10,
+        wide: true,
+        large: true,
+        okButton: 'Save',
+        cancelButton: 'Cancel',
+    });
+
+    if (result === null || result === false) {
+        return;
+    }
+
+    power_user.chat_system_prompt = String(result);
+    saveSettingsDebounced();
 }
 
 /**
@@ -12207,6 +12246,10 @@ jQuery(async function () {
             console.log('Page reloaded. Aborting streaming...');
             streamingProcessor.onStopStreaming();
         }
+    });
+
+    $('#chat-system-prompt-button').on('click', async function () {
+        await openChatSystemPromptEditor();
     });
 
 
