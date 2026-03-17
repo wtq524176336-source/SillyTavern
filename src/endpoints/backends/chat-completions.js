@@ -85,13 +85,91 @@ const API_ZAI_COMMON = 'https://api.z.ai/api/paas/v4';
 const API_ZAI_CODING = 'https://api.z.ai/api/coding/paas/v4';
 const API_SILICONFLOW = 'https://api.siliconflow.com/v1';
 const API_OPENROUTER = 'https://openrouter.ai/api/v1';
-const CLAUDE_CODE_USER_AGENT = 'claude-code/2.1.74';
+const CLAUDE_CODE_ENTRYPOINT = process.env.CLAUDE_CODE_ENTRYPOINT || 'sillytavern';
 const CLAUDE_CODE_SDK_VERSION = '0.74.0';
+const CLAUDE_OAUTH_BETA = 'oauth-2025-04-20';
 const CLAUDE_CODE_BETA_HEADERS = [
     'claude-code-20250219',
     'interleaved-thinking-2025-05-14',
     'context-management-2025-06-27',
 ];
+
+/**
+ * Claude Code 2.1.76 style model defaults.
+ * Opus 4.6 supports 128k output, Sonnet 4.6 supports 64k output.
+ * Unknown models keep the caller-provided max_tokens.
+ * @param {string} model
+ * @param {number} requestedMaxTokens
+ * @returns {number}
+ */
+function getClaudeCodeMaxTokens(model, requestedMaxTokens) {
+    const requested = Number.isInteger(requestedMaxTokens) ? requestedMaxTokens : 4096;
+    const envOverride = Number.parseInt(process.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS || '', 10);
+
+    /** @type {{ default: number, upperLimit: number }} */
+    let config = { default: requested, upperLimit: requested };
+
+    if (/claude-opus-4-6/.test(model)) {
+        config = { default: 128000, upperLimit: 128000 };
+    } else if (/claude-sonnet-4-6/.test(model) || /claude-haiku-4-5/.test(model)) {
+        config = { default: 64000, upperLimit: 64000 };
+    }
+
+    const target = Number.isInteger(envOverride) && envOverride > 0 ? envOverride : config.default;
+    return Math.min(target, config.upperLimit);
+}
+
+/**
+ * @param {string | undefined} value
+ * @returns {boolean}
+ */
+function isTruthyEnv(value) {
+    return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase().trim());
+}
+
+/**
+ * @returns {string}
+ */
+function getClaudeCliUserAgent() {
+    const agentSdkVersion = process.env.CLAUDE_AGENT_SDK_VERSION ? `, agent-sdk/${process.env.CLAUDE_AGENT_SDK_VERSION}` : '';
+    const clientApp = process.env.CLAUDE_AGENT_SDK_CLIENT_APP ? `, client-app/${process.env.CLAUDE_AGENT_SDK_CLIENT_APP}` : '';
+
+    return `claude-cli/2.1.76 (external, ${CLAUDE_CODE_ENTRYPOINT}${agentSdkVersion}${clientApp})`;
+}
+
+/**
+ * @param {string} model
+ * @param {string | undefined} requestedEffort
+ * @returns {string | undefined}
+ */
+function getClaudeCodeEffort(model, requestedEffort) {
+    const envEffort = String(process.env.CLAUDE_CODE_EFFORT_LEVEL || '').toLowerCase();
+    const effort = envEffort && !['auto', 'unset'].includes(envEffort) ? envEffort : requestedEffort;
+
+    if (!effort) {
+        return undefined;
+    }
+
+    if (effort === 'max' && !/claude-opus-4-6/.test(model)) {
+        return 'high';
+    }
+
+    return effort;
+}
+
+/**
+ * @param {import('express').Request} request
+ * @returns {{ user_id: string }}
+ */
+function getClaudeCodeMetadata(request) {
+    const userId = String(request.user?.profile?.handle || 'unknown');
+    const accountId = String(request.user?.profile?.accountId || '');
+    const sessionId = String(request.body.session_id || request.body.chat_id || request.body.conversation_id || userId);
+
+    return {
+        user_id: `user_${userId}_account_${accountId}_session_${sessionId}`,
+    };
+}
 
 /**
  * Module-scoped Claude caching configuration values.
@@ -210,9 +288,10 @@ function setJsonObjectFormat(bodyParams, messages, jsonSchema) {
 async function sendClaudeRequest(request, response) {
     const apiUrl = new URL(request.body.reverse_proxy || API_CLAUDE).toString();
     const apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.CLAUDE);
+    const oauthToken = String(request.body.claude_oauth_token || process.env.ANTHROPIC_AUTH_TOKEN || '');
     const divider = '-'.repeat(process.stdout.columns);
 
-    if (!apiKey) {
+    if (!apiKey && !oauthToken) {
         console.warn(color.red(`Claude API key is missing.\n${divider}`));
         return response.status(400).send({ error: true });
     }
@@ -228,10 +307,8 @@ async function sendClaudeRequest(request, response) {
         const useTools = Array.isArray(request.body.tools) && request.body.tools.length > 0;
         const useSystemPrompt = Boolean(request.body.use_sysprompt);
         const convertedPrompt = convertClaudeMessages(request.body.messages, request.body.assistant_prefill, useSystemPrompt, useTools, getPromptNames(request));
-        const useThinking = /^claude-(3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5)/.test(request.body.model);
-        const useWebSearch = /^claude-(3-5|3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5)/.test(request.body.model) && Boolean(request.body.enable_web_search);
-        const isLimitedSampling = /^claude-(opus-4-1|sonnet-4-5|haiku-4-5|opus-4-5)/.test(request.body.model);
-        const useVerbosity = /^claude-(opus-4-5)/.test(request.body.model);
+        const claudeModel = request.body.model;
+        const useWebSearch = /^claude-(3-5|3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5)/.test(claudeModel) && Boolean(request.body.enable_web_search);
         let fixThinkingPrefill = false;
         // Add custom stop sequences
         const stopSequences = [];
@@ -242,12 +319,11 @@ async function sendClaudeRequest(request, response) {
         const requestBody = {
             /** @type {any} */ system: [],
             messages: convertedPrompt.messages,
-            model: request.body.model,
-            max_tokens: request.body.max_tokens,
+            model: claudeModel,
+            max_tokens: getClaudeCodeMaxTokens(claudeModel, request.body.max_tokens),
+            metadata: getClaudeCodeMetadata(request),
             stop_sequences: stopSequences,
             temperature: request.body.temperature,
-            top_p: request.body.top_p,
-            top_k: request.body.top_k,
             stream: request.body.stream,
         };
         if (useSystemPrompt) {
@@ -298,48 +374,58 @@ async function sendClaudeRequest(request, response) {
             betaHeaders.push('prompt-caching-scope-2026-01-05');
         }
 
-        if (isLimitedSampling) {
-            if (requestBody.top_p < 1) {
-                delete requestBody.temperature;
-            } else {
-                delete requestBody.top_p;
-            }
-        }
+        const supportsThinking = /^claude-(3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5)/.test(claudeModel);
+        const useThinking = request.body.include_reasoning !== false && supportsThinking;
+        const adaptiveThinking = useThinking
+            && /^claude-(opus-4-6|sonnet-4-6)/.test(claudeModel)
+            && !isTruthyEnv(process.env.CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING);
 
-        const reasoningEffort = request.body.reasoning_effort || 'max';
-        const budgetTokens = 16000; // 固定 16000 thinking tokens
-
-        if (useThinking && Number.isInteger(budgetTokens)) {
-            // No prefill when thinking
+        if (adaptiveThinking) {
             fixThinkingPrefill = true;
-            const minThinkTokens = 1024;
-            if (requestBody.max_tokens <= minThinkTokens) {
-                const newValue = requestBody.max_tokens + minThinkTokens;
-                console.warn(color.yellow(`Claude thinking requires a minimum of ${minThinkTokens} response tokens.`));
-                console.info(color.blue(`Increasing response length to ${newValue}.`));
-                requestBody.max_tokens = newValue;
-            }
-            requestBody.thinking = {
-                type: 'enabled',
-                budget_tokens: budgetTokens,
-            };
+            requestBody.thinking = { type: 'adaptive' };
 
-            // NO I CAN'T SILENTLY IGNORE THE TEMPERATURE.
+            // Claude Code does not send sampling params with adaptive thinking.
             delete requestBody.temperature;
-            delete requestBody.top_p;
-            delete requestBody.top_k;
+        } else if (useThinking) {
+            fixThinkingPrefill = true;
+            const budgetTokens = calculateClaudeBudgetTokens(
+                requestBody.max_tokens,
+                request.body.reasoning_effort || 'medium',
+                request.body.stream,
+            );
+
+            if (Number.isInteger(budgetTokens)) {
+                requestBody.thinking = {
+                    type: 'enabled',
+                    budget_tokens: Math.min(requestBody.max_tokens - 1, budgetTokens),
+                };
+            }
+
+            delete requestBody.temperature;
+        } else if (requestBody.temperature === undefined) {
+            requestBody.temperature = 1;
         }
+
+        const effort = getClaudeCodeEffort(claudeModel, request.body.reasoning_effort);
+        if (effort) {
+            requestBody.output_config = {
+                effort,
+            };
+        }
+
+        delete requestBody.top_p;
+        delete requestBody.top_k;
 
         if (fixThinkingPrefill && convertedPrompt.messages.length && convertedPrompt.messages[convertedPrompt.messages.length - 1].role === 'assistant') {
             convertedPrompt.messages[convertedPrompt.messages.length - 1].role = 'user';
         }
 
-        // Verbosity = 'effort' (same values as OpenAI)
-        // 默认使用 'high' 让 Opus 4.5 输出更详细
-        if (useVerbosity) {
+        if (requestBody.output_config?.effort) {
             betaHeaders.push('effort-2025-11-24');
-            requestBody.output_config ??= {};
-            requestBody.output_config.effort = 'high';
+        }
+
+        if (oauthToken) {
+            betaHeaders.push(CLAUDE_OAUTH_BETA);
         }
 
         if (betaHeaders.length) {
@@ -356,8 +442,10 @@ async function sendClaudeRequest(request, response) {
                 'accept': 'application/json',
                 'content-type': 'application/json',
                 'anthropic-version': '2023-06-01',
-                'x-api-key': apiKey,
-                'User-Agent': CLAUDE_CODE_USER_AGENT,
+                ...(oauthToken ? { 'Authorization': `Bearer ${oauthToken}` } : { 'x-api-key': apiKey }),
+                'User-Agent': getClaudeCliUserAgent(),
+                'x-app': 'cli',
+                'anthropic-dangerous-direct-browser-access': 'true',
                 'X-Stainless-Arch': process.arch === 'x64' ? 'x64' : 'arm64',
                 'X-Stainless-Lang': 'js',
                 'X-Stainless-OS': 'Linux',
