@@ -264,6 +264,11 @@ ollama:
   batchSize: -1
 # -- ANTHROPIC CLAUDE API CONFIGURATION --
 claude:
+  # Enables Anthropic's top-level automatic prompt caching.
+  # https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+  # Recommended for regular multi-turn chats.
+  # When enabled, SillyTavern sends a top-level `cache_control` and skips explicit block markers.
+  enablePromptCache: false
   # Enables caching of the system prompt (if supported).
   # https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
   # -- IMPORTANT! --

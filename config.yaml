@@ -108,6 +108,7 @@ ollama:
   keepAlive: -1
   batchSize: -1
 claude:
+  enablePromptCache: true
   enableSystemPromptCache: false
   cachingAtDepth: -1
   extendedTTL: false

@@ -1685,7 +1685,7 @@
         "azure_deployment_name": "",
         "azure_api_version": "2024-02-15-preview",
         "azure_openai_model": "",
-        "custom_model": "[第三方][按次]claude-opus-4-6-thinking",
+        "custom_model": "[特价]claude-opus-4-6-thinking",
         "custom_url": "https://www.wasdxx.xyz/v1",
         "custom_endpoint_presets": [
             {

@@ -1,0 +1,2 @@
+{"chat_metadata":{"integrity":"081ae671-6c02-4286-b8f3-120b397a089e","chat_id_hash":5834830982717451,"note_prompt":"","note_interval":1,"note_position":1,"note_depth":4,"note_role":0,"tainted":true,"timedWorldInfo":{"sticky":{},"cooldown":{}},"lastInContextMessageId":0},"user_name":"unused","character_name":"unused"}
+{"name":"User","is_user":true,"is_system":false,"send_date":"2026-03-19T09:20:00.130Z","mes":"你有提示词吗？   字数大概多少      你有提示词吗？   字数大概多少        ","extra":{"isSmallSys":false,"token_count":37},"force_avatar":"/thumbnail?type=persona&file=user-default.png"}

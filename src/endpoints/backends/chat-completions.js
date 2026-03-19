@@ -175,6 +175,7 @@ function getClaudeCodeMetadata(request) {
  * Module-scoped Claude caching configuration values.
  */
 const cacheTTL = getConfigValue('claude.extendedTTL', false, 'boolean') ? '1h' : '5m';
+const enablePromptCache = getConfigValue('claude.enablePromptCache', false, 'boolean');
 const enableSystemPromptCache = getConfigValue('claude.enableSystemPromptCache', false, 'boolean');
 const cachingAtDepth = (() => {
     const value = getConfigValue('claude.cachingAtDepth', -1, 'number');
@@ -326,8 +327,11 @@ async function sendClaudeRequest(request, response) {
             temperature: request.body.temperature,
             stream: request.body.stream,
         };
+        if (enablePromptCache) {
+            requestBody.cache_control = { type: 'ephemeral', ttl: cacheTTL };
+        }
         if (useSystemPrompt) {
-            if (enableSystemPromptCache && Array.isArray(convertedPrompt.systemPrompt) && convertedPrompt.systemPrompt.length) {
+            if (!enablePromptCache && enableSystemPromptCache && Array.isArray(convertedPrompt.systemPrompt) && convertedPrompt.systemPrompt.length) {
                 convertedPrompt.systemPrompt[convertedPrompt.systemPrompt.length - 1]['cache_control'] = { type: 'ephemeral', ttl: cacheTTL };
             }
 
@@ -342,7 +346,7 @@ async function sendClaudeRequest(request, response) {
                 .map(tool => tool.function)
                 .map(fn => ({ name: fn.name, description: fn.description, input_schema: flattenSchema(fn.parameters, request.body.chat_completion_source) }));
 
-            if (enableSystemPromptCache && requestBody.tools.length) {
+            if (!enablePromptCache && enableSystemPromptCache && requestBody.tools.length) {
                 requestBody.tools[requestBody.tools.length - 1]['cache_control'] = { type: 'ephemeral', ttl: cacheTTL };
             }
         }
@@ -366,11 +370,11 @@ async function sendClaudeRequest(request, response) {
             requestBody.tools = [...webSearchTool, ...(requestBody.tools || [])];
         }
 
-        if (cachingAtDepth !== -1) {
+        if (!enablePromptCache && cachingAtDepth !== -1) {
             cachingAtDepthForClaude(convertedPrompt.messages, cachingAtDepth, cacheTTL);
         }
 
-        if (enableSystemPromptCache || cachingAtDepth !== -1) {
+        if (enablePromptCache || enableSystemPromptCache || cachingAtDepth !== -1) {
             betaHeaders.push('prompt-caching-scope-2026-01-05');
         }
 
