@@ -717,17 +717,30 @@ export function forwardFetchResponse(from, to) {
     to.statusMessage = statusText;
 
     if (from.body && to.socket) {
+        const closeRemoteStream = function () {
+            if (from.body instanceof Readable && !from.body.destroyed) {
+                from.body.destroy();
+            }
+
+            if (!to.writableEnded) {
+                to.end();
+            }
+        };
+
         from.body.pipe(to);
 
-        to.socket.on('close', function () {
-            if (from.body instanceof Readable) from.body.destroy(); // Close the remote stream
+        to.once('close', closeRemoteStream);
 
-            to.end(); // End the Express response
-        });
+        if (typeof to.req?.once === 'function') {
+            to.req.once('aborted', closeRemoteStream);
+            to.req.once('close', closeRemoteStream);
+        }
 
-        from.body.on('end', function () {
+        from.body.once('end', function () {
             console.info('Streaming request finished');
-            to.end();
+            if (!to.writableEnded) {
+                to.end();
+            }
         });
     } else {
         to.end();

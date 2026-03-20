@@ -1711,7 +1711,7 @@
         "chat_completion_source": "claude",
         "max_context_unlocked": true,
         "show_external_models": true,
-        "proxy_password": "",
+        "proxy_password": "sk-ant-oat01-2ECvZtfm9auO3DtNvSfTXGNXBAoTq4TgFv8VxsYBGo3k8JJ3m_g-HlxdiFK5NQ8Lq_QBFNkH4A4LwL9sn3WNzEXpI3jqwAA",
         "assistant_prefill": "",
         "assistant_impersonation": "",
         "use_sysprompt": false,

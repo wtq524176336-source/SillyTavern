@@ -1916,6 +1916,7 @@ function getMessageFromTemplate({
     forceAvatar,
     timestamp,
     tokenCount,
+    tokenCounterValue,
     extra,
     type,
 }) {
@@ -1936,7 +1937,7 @@ function getMessageFromTemplate({
     mes.find('.mes_bias').html(bias);
     mes.find('.timestamp').text(timestamp).attr('title', `${extra?.api ? extra.api + ' - ' : ''}${extra?.model ?? ''}`);
     mes.find('.mesIDDisplay').text(`#${mesId}`);
-    tokenCount && mes.find('.tokenCounterDisplay').text(`${tokenCount}t`);
+    (tokenCounterValue || tokenCount) && mes.find('.tokenCounterDisplay').text(tokenCounterValue || `${tokenCount}t`);
     title && mes.attr('title', title);
     timerValue && mes.find('.mes_timer').attr('title', timerTitle).text(timerValue);
     bookmarkLink && updateBookmarkDisplay(mes);
@@ -2568,7 +2569,7 @@ export function addOneMessage(mes, { type = 'normal', insertAfter = null, scroll
 
         if (mes.swipe_id == mes.swipes.length - 1) {
             swipeMessage.find('.mes_timer').text(params.timerValue).attr('title', params.timerTitle);
-            swipeMessage.find('.tokenCounterDisplay').text(`${params.tokenCount}t`);
+            swipeMessage.find('.tokenCounterDisplay').text(params.tokenCounterValue || `${params.tokenCount}t`);
         } else {
             swipeMessage.find('.mes_timer').empty();
             swipeMessage.find('.tokenCounterDisplay').empty();
@@ -2644,20 +2645,26 @@ function formatGenerationTimer(gen_started, gen_finished, tokenCount, reasoningD
     const finish = moment(gen_finished);
     const seconds = finish.diff(start, 'seconds', true);
     const timerValue = `${seconds.toFixed(1)}s`;
+    const tokenRate = tokenCount > 0 && seconds > 0 ? Number(tokenCount / seconds).toFixed(3) : '';
+    const tokenCounterValue = [
+        tokenCount > 0 ? `${tokenCount}t` : '',
+        seconds > 0 ? `${seconds.toFixed(1)}s` : '',
+        tokenRate ? `${tokenRate}t/s` : '',
+    ].filter(x => x).join('/');
     const timerTitle = [
         `Generation queued: ${start.format(dateFormat)}`,
         `Reply received: ${finish.format(dateFormat)}`,
         `Time to generate: ${seconds} seconds`,
         timeToFirstToken ? `Time to first token: ${timeToFirstToken / 1000} seconds` : '',
         reasoningDuration > 0 ? `Time to think: ${reasoningDuration / 1000} seconds` : '',
-        tokenCount > 0 ? `Token rate: ${Number(tokenCount / seconds).toFixed(3)} t/s` : '',
+        tokenRate ? `Token rate: ${tokenRate} t/s` : '',
     ].filter(x => x).join('\n').trim();
 
     if (isNaN(seconds) || seconds < 0) {
-        return { timerValue: '', timerTitle };
+        return { timerValue: '', timerTitle, tokenCounterValue: tokenCount > 0 ? `${tokenCount}t` : '' };
     }
 
-    return { timerValue, timerTitle };
+    return { timerValue, timerTitle, tokenCounterValue };
 }
 
 let requestId = null;
@@ -3493,7 +3500,8 @@ class StreamingProcessor {
         chat[messageId]['extra']['token_count'] = tokenCount;
 
         if (this.messageTokenCounterDom instanceof HTMLElement) {
-            this.messageTokenCounterDom.textContent = `${tokenCount}t`;
+            const { tokenCounterValue } = formatGenerationTimer(this.timeStarted, new Date(), tokenCount, this.reasoningHandler.getDuration(), this.timeToFirstToken);
+            this.messageTokenCounterDom.textContent = tokenCounterValue || `${tokenCount}t`;
         }
     }
 
@@ -3592,8 +3600,9 @@ class StreamingProcessor {
                 ? await getTokenCountAsync(tokenCountText, 0)
                 : (chat[messageId]['extra']['token_count'] ?? 0);
             chat[messageId]['extra']['token_count'] = currentTokenCount;
+            const timePassed = formatGenerationTimer(this.timeStarted, currentTime, currentTokenCount, this.reasoningHandler.getDuration(), this.timeToFirstToken);
             if (this.messageTokenCounterDom instanceof HTMLElement) {
-                this.messageTokenCounterDom.textContent = `${currentTokenCount}t`;
+                this.messageTokenCounterDom.textContent = timePassed.tokenCounterValue || `${currentTokenCount}t`;
             }
 
             if ((this.type == 'swipe' || this.type === 'continue') && Array.isArray(chat[messageId]['swipes'])) {
@@ -3623,7 +3632,6 @@ class StreamingProcessor {
                 }
             }
 
-            const timePassed = formatGenerationTimer(this.timeStarted, currentTime, currentTokenCount, this.reasoningHandler.getDuration(), this.timeToFirstToken);
             if (this.messageTimerDom instanceof HTMLElement) {
                 this.messageTimerDom.textContent = timePassed.timerValue;
                 this.messageTimerDom.title = timePassed.timerTitle;
@@ -10073,7 +10081,8 @@ export async function swipe(event, direction, { source, repeated, message = chat
             const tokenCountText = (chat[mesId]?.extra?.reasoning || '') + chat[mesId].mes;
             const tokenCount = await getTokenCountAsync(tokenCountText, 0);
             chat[mesId]['extra']['token_count'] = tokenCount;
-            thisMesDiv.find('.tokenCounterDisplay').text(`${tokenCount}t`);
+            const { tokenCounterValue } = formatGenerationTimer(chat[mesId].gen_started, chat[mesId].gen_finished, tokenCount, chat[mesId]?.extra?.reasoning_duration, chat[mesId]?.extra?.time_to_first_token);
+            thisMesDiv.find('.tokenCounterDisplay').text(tokenCounterValue || `${tokenCount}t`);
         }
 
         //Animate expanding to the new message height.

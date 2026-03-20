@@ -291,6 +291,7 @@ async function sendClaudeRequest(request, response) {
     const apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.CLAUDE);
     const oauthToken = String(request.body.claude_oauth_token || process.env.ANTHROPIC_AUTH_TOKEN || '');
     const divider = '-'.repeat(process.stdout.columns);
+    let clientDisconnected = false;
 
     if (!apiKey && !oauthToken) {
         console.warn(color.red(`Claude API key is missing.\n${divider}`));
@@ -299,9 +300,21 @@ async function sendClaudeRequest(request, response) {
 
     try {
         const controller = new AbortController();
-        request.socket.removeAllListeners('close');
-        request.socket.on('close', function () {
-            controller.abort();
+        const abortUpstream = function () {
+            clientDisconnected = true;
+
+            if (!controller.signal.aborted) {
+                controller.abort();
+            }
+        };
+
+        request.once('aborted', abortUpstream);
+        response.once('close', function () {
+            // `close` also fires after a normal response finishes, so only treat it
+            // as a disconnect when the response did not complete cleanly.
+            if (!response.writableEnded) {
+                abortUpstream();
+            }
         });
         const additionalHeaders = {};
         const betaHeaders = [...CLAUDE_CODE_BETA_HEADERS];
@@ -483,6 +496,11 @@ async function sendClaudeRequest(request, response) {
             return response.send(reply);
         }
     } catch (error) {
+        if (clientDisconnected || error?.name === 'AbortError') {
+            console.info('Claude request aborted by client.');
+            return;
+        }
+
         console.error(color.red(`Error communicating with Claude: ${error}\n${divider}`));
         if (!response.headersSent) {
             return response.status(500).send({ error: true });
