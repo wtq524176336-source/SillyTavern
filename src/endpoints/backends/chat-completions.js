@@ -110,9 +110,9 @@ function getClaudeCodeMaxTokens(model, requestedMaxTokens) {
     let config = { default: requested, upperLimit: requested };
 
     if (/claude-opus-4-6/.test(model)) {
-        config = { default: 128000, upperLimit: 128000 };
+        config = { default: 32000, upperLimit: 32000 };
     } else if (/claude-sonnet-4-6/.test(model) || /claude-haiku-4-5/.test(model)) {
-        config = { default: 64000, upperLimit: 64000 };
+        config = { default: 32000, upperLimit: 32000 };
     }
 
     const target = Number.isInteger(envOverride) && envOverride > 0 ? envOverride : config.default;
