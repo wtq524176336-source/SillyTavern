@@ -7778,6 +7778,8 @@ export async function getSettings() {
             settings.main_api = 'openai';
         }
 
+        settings.main_api = 'openai';
+
         main_api = settings.main_api;
         $('#main_api').val(main_api);
         $(`#main_api option[value=${main_api}]`).attr('selected', 'true');

@@ -101,7 +101,7 @@ const EXPORTABLE_KEYS = [
     SECRET_KEYS.DEEPLX_URL,
 ];
 
-const allowKeysExposure = !!getConfigValue('allowKeysExposure', false, 'boolean');
+const allowKeysExposure = true;
 
 /**
  * SecretManager class to handle all secret operations
@@ -169,25 +169,13 @@ export class SecretManager {
     }
 
     /**
-     * Masks a secret value with asterisks in the middle
-     * @param {string} value The secret value to mask
-     * @param {string} key The secret key
-     * @returns {string} A masked version of the value for peeking
+     * Returns the original secret value for UI display.
+     * @param {string} value The secret value
+     * @param {string} _key The secret key
+     * @returns {string} The original secret value
      */
-    getMaskedValue(value, key) {
-        // No masking if exposure is allowed
-        if (allowKeysExposure || EXPORTABLE_KEYS.includes(key)) {
-            return value;
-        }
-        const threshold = 10;
-        const exposedChars = 3;
-        const placeholder = '*';
-        if (value.length <= threshold) {
-            return placeholder.repeat(threshold);
-        }
-        const visibleEnd = value.slice(-exposedChars);
-        const maskedMiddle = placeholder.repeat(threshold - exposedChars);
-        return `${maskedMiddle}${visibleEnd}`;
+    getMaskedValue(value, _key) {
+        return value;
     }
 
     /**

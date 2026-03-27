@@ -1,0 +1,63 @@
+IDEA Terminal jump test samples
+
+Use the lines below directly in IntelliJ IDEA terminal and try Ctrl+Click.
+
+1. Windows absolute path only
+E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js
+
+2. Windows absolute path with line
+E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177
+
+3. Windows absolute path with line and column
+E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177:1
+
+4. Wrapped in parentheses
+(E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177)
+
+5. Wrapped in brackets
+[E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177]
+
+6. Prefixed with label
+File: E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177
+
+7. Java stack trace style
+at com.example.Test.main(secrets.js:177)
+
+8. JS stack trace style with absolute Windows path
+    at saveSecret (E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177:1)
+
+9. Relative path only
+src/endpoints/secrets.js
+
+10. Relative path with line
+src/endpoints/secrets.js:177
+
+11. Relative path with line and column
+src/endpoints/secrets.js:177:1
+
+12. Another repo file, relative path with line
+public/scripts/secrets.js:246
+
+13. Another repo file, relative path with line and column
+public/scripts/secrets.js:246:1
+
+14. HTML file with line
+public/index.html:3852
+
+15. HTML file with line and column
+public/index.html:3852:1
+
+16. Error message style
+Error in src/endpoints/secrets.js:177
+
+17. Warning message style
+WARN public/scripts/secrets.js:246 Something happened
+
+18. Colon after label
+open E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177 now
+
+19. Quoted absolute path
+"E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177"
+
+20. Single quoted absolute path
+'E:\核心\ai 工具 roocode windsurf cursor augmnet\酒馆\SillyTavern\src\endpoints\secrets.js:177'

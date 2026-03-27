@@ -6181,7 +6181,9 @@ $('#save_custom_endpoint_preset').on('click', async function () {
     const apiKey = String($('#api_key_custom').val()).trim();
     let secretId = getActiveCustomSecretId();
 
-    secretId = await writeSecret(SECRET_KEYS.CUSTOM, apiKey, presetName, { allowEmpty: true }) || secretId;
+    if (apiKey) {
+        secretId = await writeSecret(SECRET_KEYS.CUSTOM, apiKey, presetName) || secretId;
+    }
 
     await setCustomEndpointPreset(presetName, customUrl, secretId);
     updateCustomEndpointPresetControls();

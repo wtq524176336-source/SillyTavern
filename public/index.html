@@ -2210,7 +2210,7 @@
             <div id="rm_api_block" class="drawer-content closedDrawer">
                 <h3 class="margin0" id="title_api">API</h3>
                 <div class="flex-container flexFlowColumn">
-                    <div id="main-API-selector-block">
+                    <div id="main-API-selector-block" style="display:none;">
                         <select id="main_api">
                             <option value="textgenerationwebui" data-i18n="Text Completion">Text Completion</option>
                             <option value="openai" data-i18n="Chat Completion">Chat Completion</option>
@@ -2894,18 +2894,20 @@
                                         <span data-i18n="completions note prefix"></span><code>/chat/completions</code> <b data-i18n="suffix will be added automatically.">suffix will be added automatically.</b>
                                     </small>
                                 </div>
-                                <div class="range-block-title justifyLeft" data-i18n="Proxy Password">
-                                    Proxy Password
-                                </div>
-                                <div class="toggle-description justifyLeft">
-                                    <span data-i18n="Will be used as a password for the proxy instead of API key.">
-                                        Will be used as a password for the proxy instead of API key.
-                                    </span>
-                                    <br>
-                                </div>
-                                <div class="flex-container width100p">
-                                    <input id="openai_proxy_password" type="password" class="text_pole flex1" placeholder="" form="openai_form" autocomplete="off" />
-                                    <div id="openai_proxy_password_show" title="Peek a password" data-i18n="[title]Peek a password" class="menu_button fa-solid fa-eye-slash fa-fw"></div>
+                                <div id="openai_proxy_password_block" data-source="claude" data-source-mode="except">
+                                    <div class="range-block-title justifyLeft" data-i18n="Proxy Password">
+                                        Proxy Password
+                                    </div>
+                                    <div class="toggle-description justifyLeft">
+                                        <span data-i18n="Will be used as a password for the proxy instead of API key.">
+                                            Will be used as a password for the proxy instead of API key.
+                                        </span>
+                                        <br>
+                                    </div>
+                                    <div class="flex-container width100p">
+                                        <input id="openai_proxy_password" type="password" class="text_pole flex1" placeholder="" form="openai_form" autocomplete="off" />
+                                        <div id="openai_proxy_password_show" title="Peek a password" data-i18n="[title]Peek a password" class="menu_button fa-solid fa-eye-slash fa-fw"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -3847,7 +3849,7 @@
                             <!-- Azure API Key -->
                             <h4><span data-i18n="Azure API Key">Azure API Key</span></h4>
                             <div class="flex-container">
-                                <input id="api_key_azure_openai" data-setting="api_key_azure_openai" class="text_pole flex1" type="password" autocomplete="off">
+                                <input id="api_key_azure_openai" data-setting="api_key_azure_openai" class="text_pole flex1" type="text" autocomplete="off">
                                 <div title="Manage API keys" data-i18n="[title]Manage API keys" class="menu_button fa-solid fa-key fa-fw manage-api-keys" data-key="api_key_azure_openai"></div>
                             </div>
                             <div class="neutral_warning" data-i18n="For privacy reasons, your API key will be hidden after you click 'Connect'." data-for="api_key_azure_openai">
@@ -3865,7 +3867,7 @@
                                 <small data-i18n="The underlying model of your deployment. This is detected automatically when you connect.">The underlying model of your deployment. This is detected automatically when you connect.</small>
                             </div>
                         </div>
-                        <div id="prompt_post_processing_form">
+                        <div id="prompt_post_processing_form" style="display:none;">
                             <h4>
                                 <span data-i18n="Prompt Post-Processing">
                                     Prompt Post-Processing

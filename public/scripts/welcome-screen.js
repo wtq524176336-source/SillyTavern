@@ -40,8 +40,8 @@ import { sortMoments, timestampToMoment } from './utils.js';
 const assistantAvatarKey = 'assistant';
 const defaultAssistantAvatar = 'default_Assistant.png';
 
-const DEFAULT_DISPLAYED = 3;
-const MAX_DISPLAYED = 15;
+const DEFAULT_DISPLAYED = Number.MAX_SAFE_INTEGER;
+const MAX_DISPLAYED = Number.MAX_SAFE_INTEGER;
 
 export function getPermanentAssistantAvatar() {
     const assistantAvatar = accountStorage.getItem(assistantAvatarKey);

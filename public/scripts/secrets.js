@@ -250,7 +250,29 @@ export function updateSecretDisplay() {
         const label = getActiveSecretLabel(secret_key);
         const placeholderWithLabel = label ? `${placeholder} (${label})` : placeholder;
         $(input_selector).attr('placeholder', placeholderWithLabel);
+
+        const activeSecret = getActiveSecret(secret_key);
+        $(input_selector).each(function () {
+            const $input = $(this);
+            if (!$input.is('input')) {
+                return;
+            }
+            if ($input.is(':focus')) {
+                return;
+            }
+            $input.val(activeSecret?.value || '');
+        });
     }
+
+    $('.neutral_warning[data-for]').not('[data-for="vertexai_service_account_json"]').hide();
+}
+
+function getActiveSecret(key) {
+    const selectedSecret = secret_state[key];
+    if (Array.isArray(selectedSecret)) {
+        return selectedSecret.find(x => x.active) || null;
+    }
+    return null;
 }
 
 /**
@@ -319,6 +341,11 @@ export async function writeSecret(key, value, label, { allowEmpty } = {}) {
             return null;
         }
 
+        const activeSecret = getActiveSecret(key);
+        if (activeSecret?.value === value) {
+            return activeSecret.id;
+        }
+
         if (!label) {
             label = getLabel();
         }
@@ -334,8 +361,6 @@ export async function writeSecret(key, value, label, { allowEmpty } = {}) {
         }
 
         const { id } = await response.json();
-        // Clear the input field
-        $(INPUT_MAP[key]).val('').trigger('input');
         await readSecretState();
         await eventSource.emit(event_types.SECRET_WRITTEN, key);
         return id;
@@ -1048,6 +1073,7 @@ function registerSecretSlashCommands() {
 }
 
 export async function initSecrets() {
+    $('.neutral_warning[data-for]').not('[data-for="vertexai_service_account_json"]').hide();
     $('#viewSecrets').on('click', viewSecrets);
     $(document).on('click', '.manage-api-keys', async function () {
         const key = $(this).data('key');
@@ -1077,8 +1103,6 @@ export async function initSecrets() {
             }
         }
 
-        const warningElement = $(`[data-for="${id}"]`);
-        warningElement.toggle(value.length > 0);
     });
     $('.openrouter_authorize').on('click', authorizeOpenRouter);
     registerSecretSlashCommands();
