@@ -1694,32 +1694,27 @@
             {
                 "name": "None",
                 "url": "",
-                "secret_id": "",
-                "model": ""
+                "secret_id": ""
             },
             {
                 "name": "西瓜",
                 "url": "https://www.xiguaai6.com/v1",
-                "secret_id": "b806fe10-f91a-4204-9555-3e06086ae6fe",
-                "model": ""
+                "secret_id": "b806fe10-f91a-4204-9555-3e06086ae6fe"
             },
             {
                 "name": "蓝天",
                 "url": "https://www.wasdxx.xyz/v1",
-                "secret_id": "7e634269-d4c0-4d3b-a9d7-19fbbc250cea",
-                "model": ""
+                "secret_id": "7e634269-d4c0-4d3b-a9d7-19fbbc250cea"
             },
             {
                 "name": "方舟",
                 "url": "https://www.yxaiapp.com/v1",
-                "secret_id": "9d2dbc05-b170-4b6c-ab1c-e7039fcd4c98",
-                "model": ""
+                "secret_id": "9d2dbc05-b170-4b6c-ab1c-e7039fcd4c98"
             },
             {
                 "name": "大肘子",
                 "url": "https://api.dzzi.ai/v1",
-                "secret_id": "22011f3e-9cac-4936-9b2f-1ede8d609ae5",
-                "model": ""
+                "secret_id": "22011f3e-9cac-4936-9b2f-1ede8d609ae5"
             }
         ],
         "selected_custom_endpoint_preset": "西瓜",

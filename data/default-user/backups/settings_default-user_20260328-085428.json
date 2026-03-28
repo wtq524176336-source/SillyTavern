@@ -1739,7 +1739,7 @@
         "chat_completion_source": "custom",
         "max_context_unlocked": true,
         "show_external_models": true,
-        "proxy_password": "sk-Z6zgKCRAc1qdMBo4irUHQOzzVEdADkhYi9JEhuWxKn5QCkIj",
+        "proxy_password": "sk-p59skgrlnO3f7F5_njzM42X9OGrd3NEGGsDgGlCa0QbCs15vYK3g_FYr6mc",
         "assistant_prefill": "",
         "assistant_impersonation": "",
         "use_sysprompt": false,

@@ -16,6 +16,7 @@ import { enumTypes, SlashCommandEnumValue } from './slash-commands/SlashCommandE
 import { SlashCommandParser } from './slash-commands/SlashCommandParser.js';
 import { textgen_types, textgenerationwebui_settings } from './textgen-settings.js';
 import { applyStreamFadeIn } from './util/stream-fadein.js';
+import { createStreamingPreviewState, renderStreamingPreview, resetStreamingPreview } from './util/stream-preview.js';
 import { copyText, escapeRegex, isFalseBoolean, isTrueBoolean, setDatasetProperty, trimSpaces } from './utils.js';
 
 /**
@@ -289,6 +290,7 @@ export class ReasoningHandler {
         this.messageReasoningContentDom = null;
         /** @type {HTMLElement} Reasoning header DOM element `.mes_reasoning_header_title` */
         this.messageReasoningHeaderDom = null;
+        this.previewState = createStreamingPreviewState();
     }
 
     /**
@@ -549,12 +551,17 @@ export class ReasoningHandler {
 
         // Update the reasoning message
         const reasoning = trimSpaces(this.reasoningDisplayText ?? this.reasoning);
-        const displayReasoning = messageFormatting(reasoning, '', false, false, messageId, {}, true);
-
-        if (power_user.stream_fade_in) {
-            applyStreamFadeIn(this.messageReasoningContentDom, displayReasoning);
+        if (this.state === ReasoningState.Thinking) {
+            renderStreamingPreview(this.messageReasoningContentDom, reasoning, this.previewState);
         } else {
-            this.messageReasoningContentDom.innerHTML = displayReasoning;
+            const displayReasoning = messageFormatting(reasoning, '', false, false, messageId, {}, true);
+            resetStreamingPreview(this.messageReasoningContentDom, this.previewState);
+
+            if (power_user.stream_fade_in) {
+                applyStreamFadeIn(this.messageReasoningContentDom, displayReasoning);
+            } else {
+                this.messageReasoningContentDom.innerHTML = displayReasoning;
+            }
         }
 
         // Update tooltip for hidden reasoning edit

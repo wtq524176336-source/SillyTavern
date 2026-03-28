@@ -1504,6 +1504,11 @@ body.hideAllSwipeButtons :is(.swipe_left, .swipe_right),
     padding-right: var(--mes-right-spacing);
 }
 
+.mes_text.streaming-preview,
+.mes_reasoning.streaming-preview {
+    white-space: break-spaces;
+}
+
 .mes_text hr {
     opacity: 0.4;
 }

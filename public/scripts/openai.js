@@ -427,7 +427,7 @@ const default_settings = {
     azure_openai_model: '',
     custom_model: '',
     custom_url: '',
-    custom_endpoint_presets: [{ name: 'None', url: '', secret_id: '' }],
+    custom_endpoint_presets: [{ name: 'None', url: '', secret_id: '', model: '' }],
     selected_custom_endpoint_preset: 'None',
     custom_include_body: '',
     custom_exclude_body: '',
@@ -487,6 +487,7 @@ export let custom_endpoint_presets = [
         name: 'None',
         url: '',
         secret_id: '',
+        model: '',
     },
 ];
 export let selected_custom_endpoint_preset = custom_endpoint_presets[0];
@@ -6037,22 +6038,26 @@ function updateCustomEndpointPresetControls() {
     $('#custom_endpoint_preset_name').val(selected_custom_endpoint_preset.name);
 }
 
-async function setCustomEndpointPreset(name, url, secretId) {
+async function setCustomEndpointPreset(name, url, secretId, model = '') {
     const preset = custom_endpoint_presets.find(p => p.name === name);
     if (preset) {
         preset.url = url;
         preset.secret_id = secretId;
+        preset.model = model;
         selected_custom_endpoint_preset = preset;
     } else {
-        const newPreset = { name, url, secret_id: secretId };
+        const newPreset = { name, url, secret_id: secretId, model };
         custom_endpoint_presets.push(newPreset);
         selected_custom_endpoint_preset = newPreset;
     }
 
     oai_settings.custom_url = url;
+    oai_settings.custom_model = model;
     oai_settings.custom_endpoint_presets = custom_endpoint_presets;
     oai_settings.selected_custom_endpoint_preset = name;
     $('#custom_api_url_text').val(url);
+    $('#custom_model_id').val(model);
+    $('#model_custom_select').val(model);
     $('#custom_endpoint_preset_name').val(name);
     $('#custom_endpoint_preset').val(name);
 
@@ -6072,9 +6077,10 @@ function loadCustomEndpointPresets(settings) {
             name: preset.name || 'Unnamed',
             url: preset.url || '',
             secret_id: preset.secret_id || '',
+            model: preset.model || '',
         }));
     } else {
-        custom_endpoint_presets = [{ name: 'None', url: '', secret_id: '' }];
+        custom_endpoint_presets = [{ name: 'None', url: '', secret_id: '', model: '' }];
     }
 
     selected_custom_endpoint_preset = custom_endpoint_presets.find(preset => preset.name === selectedName) || custom_endpoint_presets[0];
@@ -6124,7 +6130,7 @@ async function onCustomEndpointPresetChange() {
         return;
     }
 
-    await setCustomEndpointPreset(selectedPreset.name, selectedPreset.url, selectedPreset.secret_id);
+    await setCustomEndpointPreset(selectedPreset.name, selectedPreset.url, selectedPreset.secret_id, selectedPreset.model || '');
     saveSettingsDebounced();
 }
 
@@ -6178,6 +6184,7 @@ $('#delete_proxy').on('click', async function () {
 $('#save_custom_endpoint_preset').on('click', async function () {
     const presetName = String($('#custom_endpoint_preset_name').val()).trim() || 'Unnamed';
     const customUrl = String($('#custom_api_url_text').val()).trim();
+    const customModel = String($('#custom_model_id').val()).trim();
     const apiKey = String($('#api_key_custom').val()).trim();
     let secretId = getActiveCustomSecretId();
 
@@ -6185,7 +6192,7 @@ $('#save_custom_endpoint_preset').on('click', async function () {
         secretId = await writeSecret(SECRET_KEYS.CUSTOM, apiKey, presetName) || secretId;
     }
 
-    await setCustomEndpointPreset(presetName, customUrl, secretId);
+    await setCustomEndpointPreset(presetName, customUrl, secretId, customModel);
     updateCustomEndpointPresetControls();
     saveSettingsDebounced();
     toastr.success(t`Custom endpoint preset saved.`);
@@ -6203,7 +6210,7 @@ $('#delete_custom_endpoint_preset').on('click', async function () {
     custom_endpoint_presets.splice(index, 1);
 
     if (custom_endpoint_presets.length === 0) {
-        custom_endpoint_presets = [{ name: 'None', url: '', secret_id: '' }];
+        custom_endpoint_presets = [{ name: 'None', url: '', secret_id: '', model: '' }];
     }
 
     selected_custom_endpoint_preset = custom_endpoint_presets[Math.max(0, index - 1)] || custom_endpoint_presets[0];
@@ -6211,6 +6218,7 @@ $('#delete_custom_endpoint_preset').on('click', async function () {
         selected_custom_endpoint_preset.name,
         selected_custom_endpoint_preset.url,
         selected_custom_endpoint_preset.secret_id,
+        selected_custom_endpoint_preset.model || '',
     );
     updateCustomEndpointPresetControls();
     saveSettingsDebounced();

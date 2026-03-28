@@ -269,6 +269,7 @@ import { initBulkEdit } from './scripts/bulk-edit.js';
 import { getContext } from './scripts/st-context.js';
 import { extractReasoningFromData, extractReasoningSignatureFromData, initReasoning, parseReasoningInSwipes, PromptReasoning, ReasoningHandler, removeReasoningFromString, updateReasoningUI } from './scripts/reasoning.js';
 import { accountStorage } from './scripts/util/AccountStorage.js';
+import { createStreamingPreviewState, renderStreamingPreview, resetStreamingPreview } from './scripts/util/stream-preview.js';
 import { initWelcomeScreen, openPermanentAssistantChat, openPermanentAssistantCard, getPermanentAssistantAvatar } from './scripts/welcome-screen.js';
 import { initDataMaid } from './scripts/data-maid.js';
 import { clearItemizedPrompts, deleteItemizedPrompts, findItemizedPromptSet, initItemizedPrompts, itemizedParams, itemizedPrompts, loadItemizedPrompts, promptItemize, replaceItemizedPromptText, saveItemizedPrompts } from './scripts/itemized-prompts.js';
@@ -1962,7 +1963,7 @@ export function updateMessageBlock(messageId, message, { rerenderMessage = true 
     const messageElement = chatElement.find(`[mesid="${messageId}"]`);
     if (rerenderMessage) {
         const text = message?.extra?.display_text ?? message.mes;
-        messageElement.find('.mes_text').html(messageFormatting(text, message.name, message.is_system, message.is_user, messageId, {}, false));
+        messageElement.find('.mes_text').removeClass('streaming-preview').html(messageFormatting(text, message.name, message.is_system, message.is_user, messageId, {}, false));
     }
 
     updateReasoningUI(messageElement);
@@ -3452,6 +3453,7 @@ class StreamingProcessor {
         this.reasoningSignature = null;
         this.lastTokenCountUpdate = 0;
         this.tokenCountRequestId = 0;
+        this.messagePreviewState = createStreamingPreviewState();
     }
 
     /**
@@ -3502,6 +3504,32 @@ class StreamingProcessor {
         if (this.messageTokenCounterDom instanceof HTMLElement) {
             const { tokenCounterValue } = formatGenerationTimer(this.timeStarted, new Date(), tokenCount, this.reasoningHandler.getDuration(), this.timeToFirstToken);
             this.messageTokenCounterDom.textContent = tokenCounterValue || `${tokenCount}t`;
+        }
+    }
+
+    #renderStreamingMessagePreview(text) {
+        renderStreamingPreview(this.messageTextDom, text, this.messagePreviewState);
+    }
+
+    #renderFormattedMessage(messageId, text) {
+        const formattedText = messageFormatting(
+            text,
+            chat[messageId].name,
+            chat[messageId].is_system,
+            chat[messageId].is_user,
+            messageId,
+            {},
+            false,
+        );
+
+        if (this.messageTextDom instanceof HTMLElement) {
+            resetStreamingPreview(this.messageTextDom, this.messagePreviewState);
+
+            if (power_user.stream_fade_in) {
+                applyStreamFadeIn(this.messageTextDom, formattedText);
+            } else {
+                this.messageTextDom.innerHTML = formattedText;
+            }
         }
     }
 
@@ -3615,21 +3643,10 @@ class StreamingProcessor {
                 };
             }
 
-            const formattedText = messageFormatting(
-                processedText,
-                chat[messageId].name,
-                chat[messageId].is_system,
-                chat[messageId].is_user,
-                messageId,
-                {},
-                false,
-            );
-            if (this.messageTextDom instanceof HTMLElement) {
-                if (power_user.stream_fade_in) {
-                    applyStreamFadeIn(this.messageTextDom, formattedText);
-                } else {
-                    this.messageTextDom.innerHTML = formattedText;
-                }
+            if (isFinal) {
+                this.#renderFormattedMessage(messageId, processedText);
+            } else {
+                this.#renderStreamingMessagePreview(processedText);
             }
 
             if (this.messageTimerDom instanceof HTMLElement) {
@@ -3707,6 +3724,10 @@ class StreamingProcessor {
     onErrorStreaming() {
         this.abortController.abort();
         this.isStopped = true;
+
+        if (this.messageId !== -1 && this.type !== 'impersonate') {
+            void this.onProgressStreaming(this.messageId, this.continueMessage + this.result, true);
+        }
 
         this.markUIGenStopped();
 
