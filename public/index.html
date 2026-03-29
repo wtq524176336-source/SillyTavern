@@ -169,50 +169,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div id="openai_api-presets">
-                                <div>
-                                    <div class="margin0 title_restorable standoutHeader">
-                                        <strong>
-                                            <span data-i18n="openaipresets">Chat Completion Presets</span>
-                                        </strong>
-
-                                        <div class="flex-container gap3px">
-                                            <label for="bind_preset_to_connection" class="margin0 menu_button menu_button_icon" title="Bind presets to API connections" data-i18n="[title]Bind presets to API connections">
-                                                <input id="bind_preset_to_connection" type="checkbox" class="displayNone" />
-                                                <i class="fa-fw fa-solid fa-link toggleOn"></i>
-                                                <i class="fa-fw fa-solid fa-link-slash toggleOff"></i>
-                                            </label>
-                                            <div id="import_oai_preset" class="margin0 menu_button menu_button_icon" title="Import preset" data-i18n="[title]Import preset">
-                                                <i class="fa-fw fa-solid fa-file-import"></i>
-                                            </div>
-                                            <div id="export_oai_preset" class="margin0 menu_button menu_button_icon" title="Export preset" data-i18n="[title]Export preset">
-                                                <i class="fa-fw fa-solid fa-file-export"></i>
-                                            </div>
-                                            <div id="delete_oai_preset" class="margin0 menu_button menu_button_icon" title="Delete the preset" data-i18n="[title]Delete the preset">
-                                                <i class="fa-fw fa-solid fa-trash-can"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex-container flexNoGap">
-                                        <select id="settings_preset_openai" class="flex1 text_pole" data-preset-manager-for="openai">
-                                            <option value="gui" data-i18n="Default">Default</option>
-                                        </select>
-                                        <div class="flex-container marginLeft5 gap3px">
-                                            <input id="openai_preset_import_file" type="file" accept=".json,.settings" hidden />
-                                            <div id="update_oai_preset" class="menu_button menu_button_icon" title="Update current preset" data-i18n="[title]Update current preset">
-                                                <i class="fa-fw fa-solid fa-save"></i>
-                                            </div>
-                                            <div data-preset-manager-rename="openai" class="menu_button menu_button_icon" title="Rename current preset" data-i18n="[title]Rename current preset">
-                                                <i class="fa-fw fa-solid fa-pencil"></i>
-                                            </div>
-                                            <div id="new_oai_preset" class="menu_button menu_button_icon" title="Save preset as" data-i18n="[title]Save preset as">
-                                                <i class="fa-fw fa-solid fa-file-circle-plus"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             <div id="textgenerationwebui_api-presets">
                                 <div class="margin0 title_restorable standoutHeader">
                                     <strong>
@@ -2846,11 +2802,7 @@
                             </optgroup>
                         </select>
                         <div class="inline-drawer wide100p" data-source="openai,claude,mistralai,makersuite,vertexai,deepseek,xai">
-                            <div class="inline-drawer-toggle inline-drawer-header">
-                                <b data-i18n="Reverse Proxy">Reverse Proxy</b>
-                                <div class="fa-solid fa-circle-chevron-down inline-drawer-icon down"></div>
-                            </div>
-                            <div class="inline-drawer-content">
+                            <div class="inline-drawer-content" style="display: block;">
                                 <div class="range-block-title justifyLeft" data-i18n="Proxy Presets">
                                     Proxy Presets
                                 </div>
@@ -2869,23 +2821,11 @@
                                 <div class="range-block-title justifyLeft" data-i18n="Proxy Name">
                                     Proxy Name
                                 </div>
-                                <div class="toggle-description justifyLeft">
-                                    <span data-i18n="This will show up as your saved preset.">
-                                        This will show up as your saved preset.
-                                    </span>
-                                    <br>
-                                </div>
                                 <div class="wide100p">
                                     <input id="openai_reverse_proxy_name" type="text" class="text_pole" placeholder="..." />
                                 </div>
                                 <div class="range-block-title justifyLeft" data-i18n="Proxy Server URL">
                                     Proxy Server URL
-                                </div>
-                                <div class="toggle-description justifyLeft wide100p">
-                                    <span data-i18n="Alternative server URL (leave empty to use the default value).">
-                                        Alternative server URL (leave empty to use the default value).
-                                    </span>
-                                    <br>
                                 </div>
                                 <div class="wide100p">
                                     <input id="openai_reverse_proxy" type="text" class="text_pole" placeholder="https://api.openai.com/v1" />
@@ -2909,22 +2849,6 @@
                                         <div id="openai_proxy_password_show" title="Peek a password" data-i18n="[title]Peek a password" class="menu_button fa-solid fa-eye-slash fa-fw"></div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div id="ReverseProxyWarningMessage" data-source="openai,claude,mistralai,makersuite,vertexai,deepseek,xai">
-                            <div class="reverse_proxy_warning">
-                                <b>
-                                    <div data-i18n="Using a proxy that you're not running yourself is a risk to your data privacy.">
-                                        Using a proxy that you're not running yourself is a risk to your data privacy.
-                                    </div>
-                                    <div data-i18n="ANY support requests will be REFUSED if you are using a proxy.">
-                                        ANY support requests will be REFUSED if you are using a proxy.
-                                    </div>
-                                    <hr>
-                                    <i data-i18n="Do not proceed if you do not agree to this!">
-                                        Do not proceed if you do not agree to this!
-                                    </i>
-                                </b>
                             </div>
                         </div>
                         <form id="openai_form" data-source="openai" action="javascript:void(null);" method="post" enctype="multipart/form-data">
@@ -3056,9 +2980,6 @@
                         </form>
                         <form id="claude_form" data-source="claude" action="javascript:void(null);" method="post" enctype="multipart/form-data">
                             <h4 data-i18n="Claude API Key">Claude API Key</h4>
-                            <div>
-                                <span data-i18n="Get your key from">Get your key from </span> <a target="_blank" href="https://console.anthropic.com/account/keys" data-i18n="Anthropic's developer console">Anthropic's developer console</a>.
-                            </div>
                             <div class="flex-container">
                                 <input id="api_key_claude" name="api_key_claude" class="text_pole flex1" value="" type="text" autocomplete="off">
                                 <div title="Manage API keys" data-i18n="[title]Manage API keys" class="menu_button fa-solid fa-key fa-fw manage-api-keys" data-key="api_key_claude"></div>
@@ -4495,9 +4416,6 @@
             </div>
         </div>
         <div id="WI-SP-button" class="drawer">
-            <div class="drawer-toggle drawer-header">
-                <div id="WIDrawerIcon" class="drawer-icon fa-solid fa-book-atlas fa-fw closedIcon " title="World Info" data-i18n="[title]World Info"></div>
-            </div>
             <div id="WorldInfo" class="drawer-content closedDrawer">
                 <div id="WorldInfoheader" class="fa-solid fa-grip drag-grabber"></div>
                 <div class="flex-container alignitemscenter gap10px">
@@ -5535,9 +5453,6 @@
             </div>
         </div>
         <div id="extensions-settings-button" class="drawer">
-            <div class="drawer-toggle">
-                <div class="drawer-icon fa-solid fa-cubes fa-fw closedIcon" title="Extensions" data-i18n="[title]Extensions"></div>
-            </div>
             <div id="rm_extensions_block" class="drawer-content closedDrawer">
                 <div class="extensions_block flex-container">
                     <div class="alignitemscenter flex-container wide100p">
@@ -5780,10 +5695,6 @@
             </div>
         </div>
         <div id="rightNavHolder" class="drawer">
-            <div id="unimportantYes" class="drawer-toggle drawer-header">
-                <div id="rightNavDrawerIcon" class="drawer-icon fa-solid fa-address-card fa-fw closedIcon" title="Character Management" data-i18n="[title]Character Management">
-                </div>
-            </div>
             <nav id="right-nav-panel" class="drawer-content closedDrawer fillRight">
                 <div id="right-nav-panelheader" class="fa-solid fa-grip drag-grabber">
                 </div>
@@ -5797,10 +5708,6 @@
                             </label>
                         </div>
                         <div class="right_menu_button fa-solid fa-list-ul" id="rm_button_characters" title="Select/Create Characters" data-i18n="[title]Select/Create Characters"></div>
-                    </div>
-                    <div id="HotSwapWrapper" class="alignitemscenter flex-container margin0auto wide100p">
-                        <div class="hotswap avatars_inline scroll-reset-container expander" data-i18n="[no_favs]Favorite characters to add them to HotSwaps" no_favs="Favorite characters to add them to HotSwaps">
-                        </div>
                     </div>
                 </div>
 
@@ -7984,8 +7891,19 @@
         left: 1px;
         top: 1px;
     }
-    #extensionsMenuButton{
-      display: none !important;
+    #top-settings-holder > .drawer{
+        flex: 1 1 0;
+        width: auto;
+    }
+    #top-settings-holder > .drawer > .drawer-toggle{
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    #WI-SP-button,
+    #extensions-settings-button,
+    #rightNavHolder{
+        display: none !important;
     }
     #backgrounds-button{
         display: none;
