@@ -491,6 +491,24 @@ export let custom_endpoint_presets = [
         model: '',
     },
 ];
+
+function applyDefaultProxyPreset() {
+    const defaultProxy = proxies.find(preset => preset.name === 'None') || {
+        name: 'None',
+        url: '',
+        password: '',
+        claude_key_id: '',
+    };
+
+    selected_proxy = defaultProxy;
+    $('#openai_proxy_preset').val(defaultProxy.name);
+    $('#openai_reverse_proxy_name').val(defaultProxy.name);
+    oai_settings.reverse_proxy = defaultProxy.url;
+    $('#openai_reverse_proxy').val(defaultProxy.url);
+    oai_settings.proxy_password = defaultProxy.password;
+    $('#openai_proxy_password').val(defaultProxy.password);
+    $('.reverse_proxy_warning').toggle(false);
+}
 export let selected_custom_endpoint_preset = custom_endpoint_presets[0];
 
 export let openai_setting_names;
@@ -6651,7 +6669,13 @@ export function initOpenAI() {
     $('#chat_completion_source').on('change', function () {
         cancelStatusCheck('Chat Completion source changed');
         model_list = [];
-        oai_settings.chat_completion_source = String($(this).find(':selected').val());
+        const source = String($(this).find(':selected').val());
+
+        if (source === chat_completion_sources.DEEPSEEK) {
+            applyDefaultProxyPreset();
+        }
+
+        oai_settings.chat_completion_source = source;
         toggleChatCompletionForms();
         saveSettingsDebounced();
         reconnectOpenAi();
