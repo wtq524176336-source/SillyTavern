@@ -1688,8 +1688,8 @@
         "azure_deployment_name": "",
         "azure_api_version": "2024-02-15-preview",
         "azure_openai_model": "",
-        "custom_model": "[0.1]claude-opus-4-6-thinking",
-        "custom_url": "https://api.dzzi.ai/v1",
+        "custom_model": "[次]claude-opus-4-6-thinking",
+        "custom_url": "https://www.xiguaai6.com/v1",
         "custom_endpoint_presets": [
             {
                 "name": "None",
@@ -1720,15 +1720,9 @@
                 "url": "https://api.dzzi.ai/v1",
                 "secret_id": "22011f3e-9cac-4936-9b2f-1ede8d609ae5",
                 "model": "[按次]claude-opus-4-6-thinking"
-            },
-            {
-                "name": "大肘子-特价",
-                "url": "https://api.dzzi.ai/v1",
-                "secret_id": "5e1eea8d-1394-4a22-a7a4-ebf2c9cf00c3",
-                "model": "[0.1]claude-opus-4-6-thinking"
             }
         ],
-        "selected_custom_endpoint_preset": "大肘子-特价",
+        "selected_custom_endpoint_preset": "西瓜",
         "custom_include_body": "",
         "custom_exclude_body": "",
         "custom_include_headers": "",
@@ -1742,7 +1736,7 @@
         "openrouter_allow_fallbacks": false,
         "openrouter_middleout": "auto",
         "reverse_proxy": "https://api.ai-wave.org/claude/v1",
-        "chat_completion_source": "custom",
+        "chat_completion_source": "claude",
         "max_context_unlocked": true,
         "show_external_models": true,
         "proxy_password": "sk-Z6zgKCRAc1qdMBo4irUHQOzzVEdADkhYi9JEhuWxKn5QCkIj",

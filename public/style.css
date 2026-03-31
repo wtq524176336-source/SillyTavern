@@ -1497,7 +1497,7 @@ body.hideAllSwipeButtons :is(.swipe_left, .swipe_right),
     padding-left: 0;
     padding-top: 5px;
     padding-bottom: 5px;
-    padding-right: var(--mes-right-spacing);
+    padding-right: 0;
 }
 
 .mes_text.streaming-preview,
