@@ -1,0 +1,21 @@
+<div class="chat_system_prompt_editor flexFlowColumn flex-container justifyLeft">
+    <h3 class="margin0">Chat System Prompt</h3>
+    <div class="marginBot10">
+        <strong>Global shared prompt.</strong>
+        <span>All chats use the same active prompt selected here.</span>
+    </div>
+    <div class="wide100p flex-container alignItemsCenter marginBot10">
+        <select class="chat_system_prompt_preset_select flex1 text_pole"></select>
+        <div class="menu_button menu_button_icon chat_system_prompt_add_preset" title="Save current text as a new prompt">
+            <i class="fa-solid fa-file-circle-plus"></i>
+            <span>New</span>
+        </div>
+        <div class="menu_button menu_button_icon chat_system_prompt_delete_preset" title="Delete selected prompt">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Delete</span>
+        </div>
+    </div>
+    <div class="chat_system_prompt_editor_input_wrap">
+        <textarea id="chat_system_prompt_editor_text" class="text_pole chat_system_prompt_editor_text" rows="10" data-i18n="[placeholder]Type System Prompt here..." placeholder="Type System Prompt here..."></textarea>
+    </div>
+</div>

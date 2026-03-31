@@ -8867,20 +8867,137 @@ async function openChatSystemPromptEditor() {
         return;
     }
 
-    const systemPromptValue = power_user.chat_system_prompt || chat_metadata['system_prompt'] || '';
-    const result = await callGenericPopup('<h3>Chat System Prompt</h3>', POPUP_TYPE.INPUT, systemPromptValue, {
-        rows: 10,
-        wide: true,
-        large: true,
-        okButton: 'Save',
-        cancelButton: 'Cancel',
+    const getChatSystemPrompts = () => {
+        if (!Array.isArray(power_user.chat_system_prompts) || power_user.chat_system_prompts.length === 0) {
+            power_user.chat_system_prompts = [{ name: '默认', content: '' }];
+        }
+
+        return power_user.chat_system_prompts;
+    };
+    const getPresetNames = () => getChatSystemPrompts().map(prompt => prompt.name);
+    const getPresetByName = (name) => getChatSystemPrompts().find(prompt => prompt.name === name);
+
+    const initialContent = String(power_user.chat_system_prompt || '');
+    let selectedPresetName = String(power_user.chat_system_prompt_name || getChatSystemPrompts()[0]?.name || '默认');
+
+    const $template = $(await renderTemplateAsync('chatSystemPromptEditor'));
+    const $presetSelect = $template.find('.chat_system_prompt_preset_select');
+    const $textarea = $template.find('.chat_system_prompt_editor_text');
+    let pendingContent = initialContent;
+
+    const refreshPresetOptions = () => {
+        const presetNames = getPresetNames();
+        $presetSelect.empty();
+
+        for (const name of presetNames) {
+            $('<option>').val(name).text(name).appendTo($presetSelect);
+        }
+
+        if (presetNames.length === 0) {
+            selectedPresetName = '';
+        } else if (!presetNames.includes(selectedPresetName)) {
+            selectedPresetName = presetNames[0];
+        }
+
+        $presetSelect.val(selectedPresetName);
+        const hasPresets = presetNames.length > 0;
+        $template.find('.chat_system_prompt_delete_preset').toggleClass('disabled', !hasPresets);
+    };
+
+    const applySelectedPreset = async () => {
+        if (!selectedPresetName) {
+            return;
+        }
+
+        const preset = getPresetByName(selectedPresetName);
+        if (!preset) {
+            return;
+        }
+
+        pendingContent = String(preset.content || '');
+        $textarea.val(pendingContent);
+        if (!CSS.supports('field-sizing', 'content')) {
+            await resetScrollHeight($textarea);
+        }
+    };
+
+    refreshPresetOptions();
+    $textarea.val(pendingContent);
+    if (!CSS.supports('field-sizing', 'content')) {
+        await resetScrollHeight($textarea);
+    }
+
+    $presetSelect.on('change', async function () {
+        selectedPresetName = String($(this).val() || '');
+        await applySelectedPreset();
     });
 
-    if (result === null || result === false) {
+    $textarea.on('input', function () {
+        pendingContent = String($(this).val());
+    });
+
+    $template.find('.chat_system_prompt_add_preset').on('click', async function () {
+        const defaultName = selectedPresetName || `Chat System Prompt ${getChatSystemPrompts().length + 1}`;
+        const name = await Popup.show.input('Prompt name:', '', defaultName);
+
+        if (!name) {
+            return;
+        }
+
+        getChatSystemPrompts().push({
+            name,
+            content: pendingContent,
+        });
+
+        selectedPresetName = name;
+        refreshPresetOptions();
+        saveSettingsDebounced();
+        toastr.success(`System prompt "${name}" has been saved.`);
+    });
+
+    $template.find('.chat_system_prompt_delete_preset').on('click', async function () {
+        if ($(this).hasClass('disabled') || !selectedPresetName) {
+            return;
+        }
+
+        if (getChatSystemPrompts().length <= 1) {
+            toastr.info('At least one prompt must remain.');
+            return;
+        }
+
+        const confirm = await Popup.show.confirm(`Delete "${selectedPresetName}"?`, 'This action cannot be undone.');
+        if (!confirm) {
+            return;
+        }
+
+        power_user.chat_system_prompts = getChatSystemPrompts().filter(prompt => prompt.name !== selectedPresetName);
+        selectedPresetName = power_user.chat_system_prompts[0]?.name || '默认';
+        pendingContent = String(getPresetByName(selectedPresetName)?.content || '');
+        $textarea.val(pendingContent);
+        refreshPresetOptions();
+        saveSettingsDebounced();
+    });
+
+    const result = await callGenericPopup($template, POPUP_TYPE.CONFIRM, '', {
+        wide: true,
+        okButton: 'Save',
+        cancelButton: 'Cancel',
+        onOpen: function (popup) {
+            popup.dlg.classList.add('chat_system_prompt_popup');
+        },
+    });
+
+    if (result !== POPUP_RESULT.AFFIRMATIVE) {
         return;
     }
 
-    power_user.chat_system_prompt = String(result);
+    const selectedPreset = getPresetByName(selectedPresetName);
+    if (selectedPreset) {
+        selectedPreset.content = pendingContent;
+    }
+
+    power_user.chat_system_prompt = pendingContent;
+    power_user.chat_system_prompt_name = selectedPresetName;
     saveSettingsDebounced();
 }
 

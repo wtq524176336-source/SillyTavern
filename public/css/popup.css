@@ -80,6 +80,33 @@ dialog {
     margin-top: 0px;
 }
 
+.popup.chat_system_prompt_popup {
+    height: 90vh;
+    max-height: 90vh;
+}
+
+.popup.chat_system_prompt_popup .popup-body,
+.popup.chat_system_prompt_popup .popup-content,
+.popup.chat_system_prompt_popup .chat_system_prompt_editor {
+    min-height: 0;
+}
+
+.popup.chat_system_prompt_popup .chat_system_prompt_editor {
+    height: 100%;
+}
+
+.popup.chat_system_prompt_popup .chat_system_prompt_editor_input_wrap {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.popup.chat_system_prompt_popup .chat_system_prompt_editor_text {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+}
+
 .popup.vertical_scrolling_dialogue_popup .popup-content {
     overflow-y: auto;
 }

@@ -278,6 +278,13 @@ export const power_user = {
     },
 
     chat_system_prompt: '',
+    chat_system_prompt_name: '默认',
+    chat_system_prompts: [
+        {
+            name: '默认',
+            content: '',
+        },
+    ],
 
     reasoning: {
         name: DEFAULT_REASONING_TEMPLATE,
@@ -1567,6 +1574,32 @@ export async function loadPowerUserSettings(settings, data) {
             delete settings.power_user.auto_sort_tags;
         }
         Object.assign(power_user, settings.power_user);
+    }
+
+    if (!Array.isArray(power_user.chat_system_prompts) || power_user.chat_system_prompts.length === 0) {
+        power_user.chat_system_prompts = [
+            {
+                name: '默认',
+                content: String(power_user.chat_system_prompt || ''),
+            },
+        ];
+    }
+
+    power_user.chat_system_prompts = power_user.chat_system_prompts.map(prompt => ({
+        name: String(prompt?.name || '默认'),
+        content: String(prompt?.content || ''),
+    }));
+
+    if (!power_user.chat_system_prompt_name) {
+        power_user.chat_system_prompt_name = power_user.chat_system_prompts[0]?.name || '默认';
+    }
+
+    const selectedChatSystemPrompt = power_user.chat_system_prompts.find(prompt => prompt.name === power_user.chat_system_prompt_name);
+    if (selectedChatSystemPrompt) {
+        power_user.chat_system_prompt = String(selectedChatSystemPrompt.content || '');
+    } else {
+        power_user.chat_system_prompt_name = power_user.chat_system_prompts[0]?.name || '默认';
+        power_user.chat_system_prompt = String(power_user.chat_system_prompts[0]?.content || '');
     }
 
     if (power_user.stscript === undefined) {
