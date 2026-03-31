@@ -691,7 +691,7 @@ small {
     display: none;
 }
 
-.mes.smallSysMes .mesAvatarWrapper {
+.mes.smallSysMes .mesAvatarWrapper123 {
     display: none;
     height: unset;
     min-height: unset;
@@ -1385,10 +1385,6 @@ body.hideAllSwipeButtons :is(.swipe_left, .swipe_right),
     transition: var(--animation-duration-2x);
 }
 
-.last_mes .mesAvatarWrapper {
-    padding-bottom: var(--avatar-base-height);
-}
-
 .mes .avatar {
     cursor: pointer;
 }
@@ -1506,7 +1502,7 @@ body.hideAllSwipeButtons :is(.swipe_left, .swipe_right),
 
 .mes_text.streaming-preview,
 .mes_reasoning.streaming-preview {
-    white-space: break-spaces;
+    white-space: pre-wrap;
 }
 
 .mes_text hr {

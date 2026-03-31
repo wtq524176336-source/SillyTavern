@@ -341,6 +341,7 @@ export class Popup {
                 break;
             }
             case POPUP_TYPE.INPUT: {
+                this.dlg.classList.add('popup-type-input');
                 this.mainInput.style.display = 'block';
                 // Input shows OK if not explicitly set to false, and CANCEL if not explicitly set to false
                 if (okButton === false) this.okButton.style.display = 'none';

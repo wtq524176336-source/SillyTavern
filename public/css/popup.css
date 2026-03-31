@@ -66,6 +66,15 @@ dialog {
     flex-grow: 1;
 }
 
+.popup.popup-type-input .popup-content {
+    flex-grow: 0;
+}
+
+.popup.popup-type-input .popup-input[rows]:not([rows="1"]) {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 .popup .popup-content h3:first-child {
     /* No double spacing for the first heading needed, the .popup-content already has margin */
     margin-top: 0px;

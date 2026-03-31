@@ -479,6 +479,7 @@ export let proxies = [
         name: 'None',
         url: '',
         password: '',
+        claude_key_id: '',
     },
 ];
 export let selected_proxy = proxies[0];
@@ -6011,8 +6012,39 @@ export function loadProxyPresets(settings) {
         option.selected = preset.name === 'None';
         $('#openai_proxy_preset').append(option);
     }
-    $('#openai_proxy_preset').val(selected_proxy.name);
-    setProxyPreset(selected_proxy.name, selected_proxy.url, selected_proxy.password);
+
+    const initialPreset = proxyPresets.find(preset => preset.name === selected_proxy.name) || selected_proxy;
+    if (oai_settings.chat_completion_source === chat_completion_sources.CLAUDE && !initialPreset.claude_key_id) {
+        initialPreset.claude_key_id = getActiveSecretId(SECRET_KEYS.CLAUDE);
+    }
+    $('#openai_proxy_preset').val(initialPreset.name);
+    void setProxyPreset(initialPreset.name, initialPreset.url, initialPreset.password, initialPreset.claude_key_id || selected_proxy.claude_key_id);
+}
+
+function getActiveSecretId(key) {
+    const secrets = secret_state[key];
+    if (!Array.isArray(secrets)) {
+        return '';
+    }
+
+    return secrets.find(secret => secret.active)?.id || '';
+}
+
+async function getSecretIdForInput(key, selector, label) {
+    const value = String($(selector).val()).trim();
+    if (!value) {
+        return getActiveSecretId(key);
+    }
+
+    const secrets = secret_state[key];
+    if (Array.isArray(secrets)) {
+        const matchedSecret = secrets.find(secret => secret.id === value || secret.value === value);
+        if (matchedSecret) {
+            return matchedSecret.id;
+        }
+    }
+
+    return await writeSecret(key, value, label) || '';
 }
 
 function getActiveCustomSecretId() {
@@ -6089,14 +6121,15 @@ function loadCustomEndpointPresets(settings) {
     updateCustomEndpointPresetControls();
 }
 
-function setProxyPreset(name, url, password) {
+async function setProxyPreset(name, url, password, claudeKeyId = '') {
     const preset = proxies.find(p => p.name === name);
     if (preset) {
         preset.url = url;
         preset.password = password;
+        preset.claude_key_id = claudeKeyId;
         selected_proxy = preset;
     } else {
-        let new_proxy = { name, url, password };
+        let new_proxy = { name, url, password, claude_key_id: claudeKeyId };
         proxies.push(new_proxy);
         selected_proxy = new_proxy;
     }
@@ -6106,15 +6139,20 @@ function setProxyPreset(name, url, password) {
     $('#openai_reverse_proxy').val(oai_settings.reverse_proxy);
     oai_settings.proxy_password = password;
     $('#openai_proxy_password').val(oai_settings.proxy_password);
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.CLAUDE && claudeKeyId) {
+        await rotateSecret(SECRET_KEYS.CLAUDE, claudeKeyId);
+    }
+
     reconnectOpenAi();
 }
 
-function onProxyPresetChange() {
+async function onProxyPresetChange() {
     const value = String($('#openai_proxy_preset').find(':selected').val());
     const selectedPreset = proxies.find(preset => preset.name === value);
 
     if (selectedPreset) {
-        setProxyPreset(selectedPreset.name, selectedPreset.url, selectedPreset.password);
+        await setProxyPreset(selectedPreset.name, selectedPreset.url, selectedPreset.password, selectedPreset.claude_key_id);
     } else {
         console.error(t`Proxy preset '${value}' not found in proxies array.`);
     }
@@ -6138,8 +6176,14 @@ $('#save_proxy').on('click', async function () {
     const presetName = $('#openai_reverse_proxy_name').val();
     const reverseProxy = $('#openai_reverse_proxy').val();
     const proxyPassword = $('#openai_proxy_password').val();
+    const existingPreset = proxies.find(preset => preset.name === presetName);
+    let claudeKeyId = existingPreset?.claude_key_id || selected_proxy?.claude_key_id || '';
 
-    setProxyPreset(presetName, reverseProxy, proxyPassword);
+    if (oai_settings.chat_completion_source === chat_completion_sources.CLAUDE) {
+        claudeKeyId = await getSecretIdForInput(SECRET_KEYS.CLAUDE, '#api_key_claude', presetName) || claudeKeyId;
+    }
+
+    await setProxyPreset(presetName, reverseProxy, proxyPassword, claudeKeyId);
     saveSettingsDebounced();
     toastr.success(t`Proxy Saved`);
     if ($('#openai_proxy_preset').val() !== presetName) {
@@ -6164,7 +6208,7 @@ $('#delete_proxy').on('click', async function () {
             const newIndex = Math.max(0, index - 1);
             selected_proxy = proxies[newIndex];
         } else {
-            selected_proxy = { name: 'None', url: '', password: '' };
+            selected_proxy = { name: 'None', url: '', password: '', claude_key_id: '' };
         }
 
         $('#openai_reverse_proxy_name').val(selected_proxy.name);

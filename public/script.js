@@ -9989,7 +9989,7 @@ export async function swipe(event, direction, { source, repeated, message = chat
             return (divMessageId < mesId + MAXIMUM_ANIMATED && divMessageId >= mesId);
         });
         if (swipedMessagesDiv.length > 0) {
-            let swipeClasses = '.mes_block, .mesAvatarWrapper';
+            let swipeClasses = '.mes_block, .mesAvatarWrapper123';
             swipeClasses += classes;
 
             //Select only the target classes.

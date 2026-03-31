@@ -79,19 +79,19 @@ function getBackupFunction(handle) {
 /**
  * Gets a preview message from an array of chat messages
  * @param {Array<Object>} messages - Array of chat messages, each with a 'mes' property
- * @returns {string} A truncated preview of the last message or empty string if no messages
+ * @returns {string} A truncated preview of the first user message or empty string if no messages
  */
 function getPreviewMessage(messages) {
     const strlen = 400;
-    const lastMessage = messages[messages.length - 1]?.mes;
+    const firstUserMessage = messages.find(message => message?.is_user && typeof message?.mes === 'string')?.mes;
 
-    if (!lastMessage) {
+    if (!firstUserMessage) {
         return '';
     }
 
-    return lastMessage.length > strlen
-        ? '...' + lastMessage.substring(lastMessage.length - strlen)
-        : lastMessage;
+    return firstUserMessage.length > strlen
+        ? firstUserMessage.substring(0, strlen) + '...'
+        : firstUserMessage;
 }
 
 process.on('exit', () => {
@@ -350,9 +350,10 @@ async function checkChatIntegrity(filePath, integritySlug) {
  * @param {string} pathToFile - Path to the chat file
  * @param {object} additionalData - Additional data to include in the result
  * @param {boolean} withMetadata - Whether to read chat metadata
+ * @param {boolean} useFirstUserMessage - Whether to use the first user message as preview text
  * @returns {Promise<ChatInfo>}
  */
-export async function getChatInfo(pathToFile, additionalData = {}, withMetadata = false) {
+export async function getChatInfo(pathToFile, additionalData = {}, withMetadata = false, useFirstUserMessage = false) {
     return new Promise(async (res) => {
         const parsedPath = path.parse(pathToFile);
         const stats = await fs.promises.stat(pathToFile);
@@ -380,6 +381,7 @@ export async function getChatInfo(pathToFile, additionalData = {}, withMetadata 
 
         let lastLine;
         let itemCounter = 0;
+        let firstUserMessage = '';
         rl.on('line', (line) => {
             if (withMetadata && itemCounter === 0) {
                 const jsonData = tryParse(line);
@@ -387,6 +389,14 @@ export async function getChatInfo(pathToFile, additionalData = {}, withMetadata 
                     chatData.chat_metadata = jsonData.chat_metadata;
                 }
             }
+
+            if (useFirstUserMessage && !firstUserMessage) {
+                const jsonData = tryParse(line);
+                if (jsonData?.is_user && typeof jsonData?.mes === 'string') {
+                    firstUserMessage = jsonData.mes;
+                }
+            }
+
             itemCounter++;
             lastLine = line;
         });
@@ -397,7 +407,7 @@ export async function getChatInfo(pathToFile, additionalData = {}, withMetadata 
                 const jsonData = tryParse(lastLine);
                 if (jsonData && (jsonData.name || jsonData.character_name || jsonData.chat_metadata)) {
                     chatData.chat_items = (itemCounter - 1);
-                    chatData.mes = jsonData['mes'] || '[The message is empty]';
+                    chatData.mes = useFirstUserMessage ? (firstUserMessage || jsonData['mes'] || '[The message is empty]') : (jsonData['mes'] || '[The message is empty]');
                     chatData.last_mes = jsonData['send_date'] || new Date(Math.round(stats.mtimeMs)).toISOString();
 
                     res(chatData);
@@ -1005,8 +1015,8 @@ router.post('/recent', async function (request, response) {
         const jsonFilesPromise = recentChats.map((file) => {
             const withMetadata = !!request.body.metadata;
             return file.groupId
-                ? getChatInfo(file.filePath, { group: file.groupId }, withMetadata)
-                : getChatInfo(file.filePath, { avatar: file.pngFile }, withMetadata);
+                ? getChatInfo(file.filePath, { group: file.groupId }, withMetadata, true)
+                : getChatInfo(file.filePath, { avatar: file.pngFile }, withMetadata, true);
         });
 
         const chatData = (await Promise.allSettled(jsonFilesPromise)).filter(x => x.status === 'fulfilled').map(x => x.value);
