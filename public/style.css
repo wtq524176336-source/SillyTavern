@@ -1134,6 +1134,7 @@ body .panelControlBar {
 #extensionsMenuButton {
     order: 4;
     padding: 1px;
+    display: none !important;
 }
 
 .options-content a,

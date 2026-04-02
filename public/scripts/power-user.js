@@ -361,6 +361,7 @@ export let context_presets = [];
 
 const storage_keys = {
     storyStringValidationCache: 'StoryStringValidationCache',
+    mobileFontScaleInitialized: 'MobileFontScaleInitialized',
 };
 
 const contextControls = [
@@ -1574,6 +1575,12 @@ export async function loadPowerUserSettings(settings, data) {
             delete settings.power_user.auto_sort_tags;
         }
         Object.assign(power_user, settings.power_user);
+    }
+
+    if (isMobile() && accountStorage.getItem(storage_keys.mobileFontScaleInitialized) !== 'true') {
+        power_user.font_scale = 1;
+        accountStorage.setItem(storage_keys.mobileFontScaleInitialized, 'true');
+        saveSettingsDebounced();
     }
 
     if (!Array.isArray(power_user.chat_system_prompts) || power_user.chat_system_prompts.length === 0) {
