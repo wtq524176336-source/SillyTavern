@@ -18,6 +18,7 @@ import { getSecretLabelById } from '../../secrets.js';
 const MODULE_NAME = 'connection-manager';
 const NONE = '<None>';
 const EMPTY = '<Empty>';
+let connectionProfileSpinner;
 
 const DEFAULT_SETTINGS = {
     profiles: [],
@@ -100,8 +101,7 @@ class ConnectionManagerSpinner {
     abortController = new AbortController();
 
     constructor() {
-        // @ts-ignore
-        this.spinnerElement = document.getElementById('connection_profile_spinner');
+        this.spinnerElement = connectionProfileSpinner;
         this.abortController = new AbortController();
     }
 
@@ -486,16 +486,25 @@ async function renderDetailsContent(detailsContent) {
     const container = document.getElementById('rm_api_block');
     const settings = await renderExtensionTemplateAsync(MODULE_NAME, 'settings');
     container.insertAdjacentHTML('afterbegin', settings);
+    const settingsRoot = document.getElementById('connection_manager_settings');
 
     /** @type {HTMLSelectElement} */
     // @ts-ignore
     const profiles = document.getElementById('connection_profiles');
+    connectionProfileSpinner = document.getElementById('connection_profile_spinner');
+    const updateButton = document.getElementById('update_connection_profile');
+    const reloadButton = document.getElementById('reload_connection_profile');
+    const deleteButton = document.getElementById('delete_connection_profile');
+    const createButton = document.getElementById('create_connection_profile');
+    const editButton = document.getElementById('edit_connection_profile');
+    /** @type {HTMLElement} */
+    const viewDetails = document.getElementById('view_connection_profile');
+    const detailsContent = document.getElementById('connection_profile_details_content');
     renderConnectionProfiles(profiles);
 
     function toggleProfileSpecificButtons() {
         const profileId = extension_settings.connectionManager.selectedProfile;
-        const profileSpecificButtons = ['update_connection_profile', 'reload_connection_profile', 'delete_connection_profile'];
-        profileSpecificButtons.forEach(id => document.getElementById(id).classList.toggle('disabled', !profileId));
+        [updateButton, reloadButton, deleteButton].forEach(button => button.classList.toggle('disabled', !profileId));
     }
     toggleProfileSpecificButtons();
 
@@ -531,7 +540,6 @@ async function renderDetailsContent(detailsContent) {
         await eventSource.emit(event_types.CONNECTION_PROFILE_LOADED, profile.name);
     });
 
-    const reloadButton = document.getElementById('reload_connection_profile');
     reloadButton.addEventListener('click', async () => {
         const selectedProfile = extension_settings.connectionManager.selectedProfile;
         const profile = extension_settings.connectionManager.profiles.find(p => p.id === selectedProfile);
@@ -545,7 +553,6 @@ async function renderDetailsContent(detailsContent) {
         toastr.success('Connection profile reloaded', '', { timeOut: 1500 });
     });
 
-    const createButton = document.getElementById('create_connection_profile');
     createButton.addEventListener('click', async () => {
         const profile = await createConnectionProfile();
         if (!profile) {
@@ -560,7 +567,6 @@ async function renderDetailsContent(detailsContent) {
         await eventSource.emit(event_types.CONNECTION_PROFILE_LOADED, profile.name);
     });
 
-    const updateButton = document.getElementById('update_connection_profile');
     updateButton.addEventListener('click', async () => {
         const selectedProfile = extension_settings.connectionManager.selectedProfile;
         const profile = extension_settings.connectionManager.profiles.find(p => p.id === selectedProfile);
@@ -577,7 +583,6 @@ async function renderDetailsContent(detailsContent) {
         toastr.success('Connection profile updated', '', { timeOut: 1500 });
     });
 
-    const deleteButton = document.getElementById('delete_connection_profile');
     deleteButton.addEventListener('click', async () => {
         await deleteConnectionProfile();
         renderConnectionProfiles(profiles);
@@ -585,7 +590,6 @@ async function renderDetailsContent(detailsContent) {
         await eventSource.emit(event_types.CONNECTION_PROFILE_LOADED, NONE);
     });
 
-    const editButton = document.getElementById('edit_connection_profile');
     editButton.addEventListener('click', async () => {
         const selectedProfile = extension_settings.connectionManager.selectedProfile;
         const profile = extension_settings.connectionManager.profiles.find(p => p.id === selectedProfile);
@@ -660,9 +664,6 @@ async function renderDetailsContent(detailsContent) {
         await renderDetailsContent(detailsContent);
     });
 
-    /** @type {HTMLElement} */
-    const viewDetails = document.getElementById('view_connection_profile');
-    const detailsContent = document.getElementById('connection_profile_details_content');
     viewDetails.addEventListener('click', async () => {
         viewDetails.classList.toggle('active');
         detailsContent.classList.toggle('hidden');
@@ -824,4 +825,6 @@ async function renderDetailsContent(detailsContent) {
             return JSON.stringify(profile);
         },
     }));
+
+    settingsRoot.remove();
 })();
