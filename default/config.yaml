@@ -73,7 +73,7 @@ requestProxy:
   # If a proxy is enabled, all outgoing HTTP/HTTPS requests will be routed through it.
   enabled: true
   # Proxy URL. Possible protocols: http, https, socks, socks5, socks4, pac
-  url: "http://127.0.0.1:16023"
+  url: ""
   # Proxy bypass list. Requests to these hosts won't be routed through the proxy.
   bypass:
     - localhost

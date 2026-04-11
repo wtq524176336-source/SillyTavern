@@ -1707,8 +1707,8 @@
         "azure_deployment_name": "",
         "azure_api_version": "2024-02-15-preview",
         "azure_openai_model": "",
-        "custom_model": "claude-opus-4-6-thinking",
-        "custom_url": "https://www.yxaiapp.com/v1",
+        "custom_model": "[次]claude-opus-4-6-thinking",
+        "custom_url": "https://www.xiguaai6.com/v1",
         "custom_endpoint_presets": [
             {
                 "name": "None",
@@ -1747,7 +1747,7 @@
                 "model": "[0.1]claude-opus-4-6-thinking"
             }
         ],
-        "selected_custom_endpoint_preset": "方舟",
+        "selected_custom_endpoint_preset": "西瓜",
         "custom_include_body": "",
         "custom_exclude_body": "",
         "custom_include_headers": "",
