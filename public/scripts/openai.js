@@ -242,6 +242,10 @@ export const reasoning_effort_types = {
     max: 'max',
 };
 
+const DEEPSEEK_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro'];
+const DEEPSEEK_DEFAULT_MODEL = DEEPSEEK_MODELS[0];
+const DEEPSEEK_REASONING_EFFORTS = [reasoning_effort_types.high, reasoning_effort_types.max];
+
 export const verbosity_levels = {
     auto: 'auto',
     low: 'low',
@@ -412,7 +416,7 @@ const default_settings = {
     electronhub_sort_models: 'alphabetically',
     electronhub_group_models: false,
     nanogpt_model: 'gpt-4o-mini',
-    deepseek_model: 'deepseek-chat',
+    deepseek_model: DEEPSEEK_DEFAULT_MODEL,
     aimlapi_model: 'chatgpt-4o-latest',
     xai_model: 'grok-3-beta',
     pollinations_model: 'openai',
@@ -510,6 +514,30 @@ function applyDefaultProxyPreset() {
     $('.reverse_proxy_warning').toggle(false);
 }
 export let selected_custom_endpoint_preset = custom_endpoint_presets[0];
+
+function normalizeDeepSeekModel(model) {
+    return DEEPSEEK_MODELS.includes(model) ? model : DEEPSEEK_DEFAULT_MODEL;
+}
+
+function normalizeDeepSeekReasoningEffort(reasoningEffort) {
+    return DEEPSEEK_REASONING_EFFORTS.includes(reasoningEffort) ? reasoningEffort : reasoning_effort_types.high;
+}
+
+function setReasoningEffortControls() {
+    const isDeepSeek = oai_settings.chat_completion_source === chat_completion_sources.DEEPSEEK;
+
+    $('#openai_reasoning_effort option').each(function () {
+        const value = String($(this).val());
+        const isAllowed = !isDeepSeek || DEEPSEEK_REASONING_EFFORTS.includes(value);
+        $(this).prop('disabled', !isAllowed).toggle(isAllowed);
+    });
+
+    if (isDeepSeek) {
+        oai_settings.reasoning_effort = normalizeDeepSeekReasoningEffort(oai_settings.reasoning_effort);
+    }
+
+    $('#openai_reasoning_effort').val(oai_settings.reasoning_effort);
+}
 
 export let openai_setting_names;
 export let openai_settings;
@@ -1663,7 +1691,7 @@ export function getChatCompletionModel(settings = null) {
         case chat_completion_sources.NANOGPT:
             return settings.nanogpt_model;
         case chat_completion_sources.DEEPSEEK:
-            return settings.deepseek_model;
+            return normalizeDeepSeekModel(settings.deepseek_model);
         case chat_completion_sources.AIMLAPI:
             return settings.aimlapi_model;
         case chat_completion_sources.XAI:
@@ -2017,6 +2045,8 @@ function saveModelList(data) {
     }
 
     if (oai_settings.chat_completion_source == chat_completion_sources.DEEPSEEK) {
+        model_list = DEEPSEEK_MODELS.map(id => model_list.find(model => model.id === id) ?? { id });
+
         $('#model_deepseek_select').empty();
         model_list.forEach((model) => {
             $('#model_deepseek_select').append(
@@ -2026,10 +2056,7 @@ function saveModelList(data) {
                 }));
         });
 
-        const selectedModel = model_list.find(model => model.id === oai_settings.deepseek_model);
-        if (model_list.length > 0 && (!selectedModel || !oai_settings.deepseek_model)) {
-            oai_settings.deepseek_model = model_list[0].id;
-        }
+        oai_settings.deepseek_model = normalizeDeepSeekModel(oai_settings.deepseek_model);
 
         $('#model_deepseek_select').val(oai_settings.deepseek_model).trigger('change');
     }
@@ -2399,6 +2426,10 @@ function getAimlapiModelTemplate(option) {
 function getReasoningEffort(settings = null, model = null) {
     settings = settings ?? oai_settings;
     model = model ?? getChatCompletionModel(settings);
+
+    if (settings.chat_completion_source === chat_completion_sources.DEEPSEEK) {
+        return normalizeDeepSeekReasoningEffort(settings.reasoning_effort);
+    }
 
     // These sources expect the effort as string.
     const reasoningEffortSources = [
@@ -4041,6 +4072,13 @@ function loadOpenAISettings(data, settings) {
         }
     }
 
+    oai_settings.deepseek_model = normalizeDeepSeekModel(oai_settings.deepseek_model);
+    if (oai_settings.chat_completion_source === chat_completion_sources.DEEPSEEK) {
+        oai_settings.reasoning_effort = normalizeDeepSeekReasoningEffort(oai_settings.reasoning_effort);
+    }
+    $('#model_deepseek_select').val(oai_settings.deepseek_model);
+    $('#openai_reasoning_effort').val(oai_settings.reasoning_effort);
+
     $(`#settings_preset_openai option[value="${openai_setting_names[oai_settings.preset_settings_openai]}"]`).prop('selected', true);
     $('#bind_preset_to_connection').prop('checked', oai_settings.bind_preset_to_connection);
     $('#openai_external_category').toggle(oai_settings.show_external_models);
@@ -5155,9 +5193,9 @@ async function onModelChange() {
     }
 
     if ($(this).is('#model_deepseek_select')) {
-        if (!value) {
-            console.debug('Null DeepSeek model selected. Ignoring.');
-            return;
+        if (!DEEPSEEK_MODELS.includes(value)) {
+            value = DEEPSEEK_DEFAULT_MODEL;
+            $('#model_deepseek_select').val(value);
         }
 
         console.log('DeepSeek model changed to', value);
@@ -5457,12 +5495,8 @@ async function onModelChange() {
     if (oai_settings.chat_completion_source === chat_completion_sources.DEEPSEEK) {
         if (oai_settings.max_context_unlocked) {
             $('#openai_max_context').attr('max', unlocked_max);
-        } else if (['deepseek-reasoner', 'deepseek-chat'].includes(oai_settings.deepseek_model)) {
-            $('#openai_max_context').attr('max', max_128k);
-        } else if (oai_settings.deepseek_model == 'deepseek-coder') {
-            $('#openai_max_context').attr('max', max_16k);
         } else {
-            $('#openai_max_context').attr('max', max_64k);
+            $('#openai_max_context').attr('max', max_1mil);
         }
 
         oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
@@ -5718,6 +5752,8 @@ function toggleChatCompletionForms() {
         $('#model_custom_select').trigger('change');
     }
     else if (oai_settings.chat_completion_source == chat_completion_sources.DEEPSEEK) {
+        oai_settings.deepseek_model = normalizeDeepSeekModel(oai_settings.deepseek_model);
+        $('#model_deepseek_select').val(oai_settings.deepseek_model);
         $('#model_deepseek_select').trigger('change');
     }
     else if (oai_settings.chat_completion_source == chat_completion_sources.AIMLAPI) {
@@ -5751,6 +5787,8 @@ function toggleChatCompletionForms() {
         const matchesSource = validSources.includes(oai_settings.chat_completion_source);
         $(this).toggle(mode !== 'except' ? matchesSource : !matchesSource);
     });
+
+    setReasoningEffortControls();
 }
 
 async function testApiConnection() {
@@ -6887,7 +6925,11 @@ export function initOpenAI() {
     });
 
     $('#openai_reasoning_effort').on('input', function () {
-        oai_settings.reasoning_effort = String($(this).val());
+        const value = String($(this).val());
+        oai_settings.reasoning_effort = oai_settings.chat_completion_source === chat_completion_sources.DEEPSEEK
+            ? normalizeDeepSeekReasoningEffort(value)
+            : value;
+        $('#openai_reasoning_effort').val(oai_settings.reasoning_effort);
         saveSettingsDebounced();
     });
 

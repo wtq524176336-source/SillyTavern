@@ -1698,7 +1698,7 @@
         "electronhub_sort_models": "alphabetically",
         "electronhub_group_models": false,
         "nanogpt_model": "gpt-4o-mini",
-        "deepseek_model": "deepseek-reasoner",
+        "deepseek_model": "deepseek-v4-pro",
         "aimlapi_model": "gpt-4o-mini-2024-07-18",
         "xai_model": "grok-3-beta",
         "pollinations_model": "openai",
@@ -1764,8 +1764,8 @@
         ],
         "openrouter_allow_fallbacks": false,
         "openrouter_middleout": "auto",
-        "reverse_proxy": "https://api.ai-wave.org/claude/v1",
-        "chat_completion_source": "custom",
+        "reverse_proxy": "",
+        "chat_completion_source": "deepseek",
         "max_context_unlocked": true,
         "show_external_models": true,
         "proxy_password": "sk-Z6zgKCRAc1qdMBo4irUHQOzzVEdADkhYi9JEhuWxKn5QCkIj",
@@ -1821,12 +1821,18 @@
             "url": "https://api.ai-wave.org/claude/v1",
             "password": "sk-Z6zgKCRAc1qdMBo4irUHQOzzVEdADkhYi9JEhuWxKn5QCkIj",
             "claude_key_id": "90b6e13a-dd58-457f-a8d2-aa7e87db3377"
+        },
+        {
+            "name": "None",
+            "url": "",
+            "password": "",
+            "claude_key_id": ""
         }
     ],
     "selected_proxy": {
-        "name": "Claude-Anti",
-        "url": "https://api.ai-wave.org/claude/v1",
-        "password": "sk-Z6zgKCRAc1qdMBo4irUHQOzzVEdADkhYi9JEhuWxKn5QCkIj",
-        "claude_key_id": "638598b1-3457-4b44-b888-92c7be282ace"
+        "name": "None",
+        "url": "",
+        "password": "",
+        "claude_key_id": ""
     }
 }

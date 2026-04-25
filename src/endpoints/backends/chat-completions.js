@@ -74,7 +74,7 @@ const API_AI21 = 'https://api.ai21.com/studio/v1';
 const API_CHUTES = 'https://llm.chutes.ai/v1';
 const API_ELECTRONHUB = 'https://api.electronhub.ai/v1';
 const API_NANOGPT = 'https://nano-gpt.com/api/v1';
-const API_DEEPSEEK = 'https://api.deepseek.com/beta';
+const API_DEEPSEEK = 'https://api.deepseek.com';
 const API_XAI = 'https://api.x.ai/v1';
 const API_AIMLAPI = 'https://api.aimlapi.com/v1';
 const API_POLLINATIONS = 'https://text.pollinations.ai/openai';
@@ -1170,7 +1170,7 @@ async function sendDeepSeekRequest(request, response) {
 
         const processedMessages = addAssistantPrefix(postProcessPrompt(request.body.messages, PROMPT_PROCESSING_TYPE.SEMI_TOOLS, getPromptNames(request)), bodyParams.tools, 'prefix');
 
-        if (/-reasoner/.test(request.body.model)) {
+        if (request.body.include_reasoning) {
             addReasoningContentToToolCalls(processedMessages);
         }
 
@@ -1185,6 +1185,10 @@ async function sendDeepSeekRequest(request, response) {
             'top_p': request.body.top_p,
             'stop': request.body.stop,
             'seed': request.body.seed,
+            'thinking': {
+                type: request.body.include_reasoning ? 'enabled' : 'disabled',
+            },
+            'reasoning_effort': request.body.reasoning_effort || 'high',
             ...bodyParams,
         };
 
@@ -1803,7 +1807,7 @@ router.post('/status', async function (request, statusResponse) {
             headers = {};
             queryParams = { detailed: true };
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.DEEPSEEK) {
-            apiUrl = new URL(request.body.reverse_proxy || API_DEEPSEEK.replace('/beta', '')).toString();
+            apiUrl = new URL(request.body.reverse_proxy || API_DEEPSEEK).toString();
             apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.DEEPSEEK);
             headers = {};
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.XAI) {
