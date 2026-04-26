@@ -75,6 +75,8 @@ const API_CHUTES = 'https://llm.chutes.ai/v1';
 const API_ELECTRONHUB = 'https://api.electronhub.ai/v1';
 const API_NANOGPT = 'https://nano-gpt.com/api/v1';
 const API_DEEPSEEK = 'https://api.deepseek.com';
+const API_OPENCODE_GO = 'https://opencode.ai/zen/go/v1';
+const API_NVIDIA = 'https://integrate.api.nvidia.com/v1';
 const API_XAI = 'https://api.x.ai/v1';
 const API_AIMLAPI = 'https://api.aimlapi.com/v1';
 const API_POLLINATIONS = 'https://text.pollinations.ai/openai';
@@ -93,6 +95,21 @@ const CLAUDE_CODE_BETA_HEADERS = [
     'interleaved-thinking-2025-05-14',
     'context-management-2025-06-27',
 ];
+const OPENCODE_ANTHROPIC_MODELS = ['minimax-m2.7', 'minimax-m2.5'];
+const DEFAULT_NVIDIA_API_KEY = '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';
+const NVIDIA_FILTERED_MODEL_PREFIXES = ['01-ai/', 'abacusai/', 'adept/', 'ai21labs/', 'aisingapore/', 'baai/', 'bigcode/', 'bytedance/', 'databricks/', 'google/', 'ibm/', 'meta/', 'microsoft/', 'mistralai/', 'nv-mistralai/', 'nvidia/', 'openai/', 'sarvamai/', 'snowflake/', 'stockmark/', 'upstage/', 'writer/', 'zyphra/'];
+
+/**
+ * @param {string} model
+ * @returns {boolean}
+ */
+function isOpenCodeAnthropicModel(model) {
+    return OPENCODE_ANTHROPIC_MODELS.includes(model);
+}
+
+function isNvidiaModelAllowed(model) {
+    return model?.id && !NVIDIA_FILTERED_MODEL_PREFIXES.some(prefix => model.id.startsWith(prefix));
+}
 
 /**
  * Claude Code 2.1.76 style model defaults.
@@ -1116,6 +1133,120 @@ async function sendCohereRequest(request, response) {
 }
 
 /**
+ * Sends a request to OpenCode Go.
+ * @param {express.Request} request Express request
+ * @param {express.Response} response Express response
+ */
+async function sendOpenCodeGoRequest(request, response) {
+    const apiKey = readSecret(request.user.directories, SECRET_KEYS.OPENCODE);
+
+    if (!apiKey) {
+        console.warn('OpenCode Go API key is missing.');
+        return response.status(400).send({ error: true });
+    }
+
+    const controller = new AbortController();
+    request.socket.removeAllListeners('close');
+    request.socket.on('close', function () {
+        controller.abort();
+    });
+
+    try {
+        if (isOpenCodeAnthropicModel(request.body.model)) {
+            const convertedPrompt = convertClaudeMessages(request.body.messages, '', true, false, getPromptNames(request));
+            const requestBody = {
+                messages: convertedPrompt.messages,
+                model: request.body.model,
+                max_tokens: request.body.max_tokens,
+                temperature: request.body.temperature,
+                stream: request.body.stream,
+                top_p: request.body.top_p,
+                stop_sequences: request.body.stop,
+            };
+
+            if (convertedPrompt.systemPrompt.length) {
+                requestBody.system = convertedPrompt.systemPrompt;
+            }
+
+            console.debug('OpenCode Go messages request:', requestBody);
+
+            const generateResponse = await fetch(API_OPENCODE_GO + '/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'anthropic-version': '2023-06-01',
+                    'x-api-key': apiKey,
+                },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal,
+            });
+
+            if (request.body.stream) {
+                return forwardFetchResponse(generateResponse, response);
+            }
+
+            if (!generateResponse.ok) {
+                const errorText = await generateResponse.text();
+                console.warn(`OpenCode Go messages endpoint returned error: ${generateResponse.status} ${generateResponse.statusText} ${errorText}`);
+                const errorJson = tryParse(errorText) ?? { error: true };
+                return response.status(500).send(errorJson);
+            }
+
+            const generateResponseJson = await generateResponse.json();
+            const responseText = generateResponseJson?.content?.filter(part => part.type === 'text')?.map(part => part.text)?.join('') || '';
+            console.debug('OpenCode Go messages response:', generateResponseJson);
+            return response.send({ choices: [{ message: { content: responseText } }], content: generateResponseJson.content });
+        }
+
+        const requestBody = {
+            messages: request.body.messages,
+            model: request.body.model,
+            temperature: request.body.temperature,
+            max_tokens: request.body.max_tokens,
+            stream: request.body.stream,
+            presence_penalty: request.body.presence_penalty,
+            frequency_penalty: request.body.frequency_penalty,
+            top_p: request.body.top_p,
+            stop: request.body.stop,
+        };
+
+        console.debug('OpenCode Go chat completions request:', requestBody);
+
+        const generateResponse = await fetch(API_OPENCODE_GO + '/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + apiKey,
+            },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal,
+        });
+
+        if (request.body.stream) {
+            return forwardFetchResponse(generateResponse, response);
+        }
+
+        if (!generateResponse.ok) {
+            const errorText = await generateResponse.text();
+            console.warn(`OpenCode Go chat completions endpoint returned error: ${generateResponse.status} ${generateResponse.statusText} ${errorText}`);
+            const errorJson = tryParse(errorText) ?? { error: true };
+            return response.status(500).send(errorJson);
+        }
+
+        const generateResponseJson = await generateResponse.json();
+        console.debug('OpenCode Go chat completions response:', generateResponseJson);
+        return response.send(generateResponseJson);
+    } catch (error) {
+        console.error('Error communicating with OpenCode Go: ', error);
+        if (!response.headersSent) {
+            response.send({ error: true });
+        } else {
+            response.end();
+        }
+    }
+}
+
+/**
  * Sends a request to DeepSeek API.
  * @param {express.Request} request Express request
  * @param {express.Response} response Express response
@@ -1810,6 +1941,10 @@ router.post('/status', async function (request, statusResponse) {
             apiUrl = new URL(request.body.reverse_proxy || API_DEEPSEEK).toString();
             apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.DEEPSEEK);
             headers = {};
+        } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.NVIDIA) {
+            apiUrl = API_NVIDIA;
+            apiKey = readSecret(request.user.directories, SECRET_KEYS.NVIDIA) || DEFAULT_NVIDIA_API_KEY;
+            headers = {};
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.XAI) {
             apiUrl = new URL(request.body.reverse_proxy || API_XAI).toString();
             apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.XAI);
@@ -2005,6 +2140,10 @@ router.post('/status', async function (request, statusResponse) {
                     });
             }
 
+            if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.NVIDIA && Array.isArray(data?.data)) {
+                data.data = data.data.filter(isNvidiaModelAllowed);
+            }
+
             statusResponse.send(data);
 
             if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.COHERE && Array.isArray(data?.models)) {
@@ -2163,6 +2302,7 @@ router.post('/generate', async function (request, response) {
             case CHAT_COMPLETION_SOURCES.MISTRALAI: return await sendMistralAIRequest(request, response);
             case CHAT_COMPLETION_SOURCES.COHERE: return await sendCohereRequest(request, response);
             case CHAT_COMPLETION_SOURCES.DEEPSEEK: return await sendDeepSeekRequest(request, response);
+            case CHAT_COMPLETION_SOURCES.OPENCODE: return await sendOpenCodeGoRequest(request, response);
             case CHAT_COMPLETION_SOURCES.AIMLAPI: return await sendAimlapiRequest(request, response);
             case CHAT_COMPLETION_SOURCES.XAI: return await sendXaiRequest(request, response);
             case CHAT_COMPLETION_SOURCES.CHUTES: return await sendChutesRequest(request, response);
@@ -2291,6 +2431,13 @@ router.post('/generate', async function (request, response) {
 
             mergeObjectWithYaml(bodyParams, request.body.custom_include_body);
             mergeObjectWithYaml(headers, request.body.custom_include_headers);
+        } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.NVIDIA) {
+            apiUrl = API_NVIDIA;
+            apiKey = readSecret(request.user.directories, SECRET_KEYS.NVIDIA) || DEFAULT_NVIDIA_API_KEY;
+            headers = {};
+            bodyParams = {
+                reasoning_effort: request.body.reasoning_effort,
+            };
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.PERPLEXITY) {
             apiUrl = API_PERPLEXITY;
             apiKey = readSecret(request.user.directories, SECRET_KEYS.PERPLEXITY);

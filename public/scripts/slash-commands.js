@@ -5058,6 +5058,7 @@ function getModelOptions(quiet) {
         { id: 'model_electronhub_select', api: 'openai', type: chat_completion_sources.ELECTRONHUB },
         { id: 'model_nanogpt_select', api: 'openai', type: chat_completion_sources.NANOGPT },
         { id: 'model_deepseek_select', api: 'openai', type: chat_completion_sources.DEEPSEEK },
+        { id: 'model_opencode_select', api: 'openai', type: chat_completion_sources.OPENCODE },
         { id: 'model_aimlapi_select', api: 'openai', type: chat_completion_sources.AIMLAPI },
         { id: 'model_xai_select', api: 'openai', type: chat_completion_sources.XAI },
         { id: 'model_pollinations_select', api: 'openai', type: chat_completion_sources.POLLINATIONS },

@@ -193,6 +193,8 @@ export const CHAT_COMPLETION_SOURCES = {
     VERTEXAI: 'vertexai',
     MISTRALAI: 'mistralai',
     CUSTOM: 'custom',
+    OPENCODE: 'opencode',
+    NVIDIA: 'nvidia',
     COHERE: 'cohere',
     PERPLEXITY: 'perplexity',
     GROQ: 'groq',
