@@ -1771,7 +1771,7 @@
         "openrouter_allow_fallbacks": false,
         "openrouter_middleout": "auto",
         "reverse_proxy": "",
-        "chat_completion_source": "deepseek",
+        "chat_completion_source": "nvidia",
         "max_context_unlocked": true,
         "show_external_models": true,
         "proxy_password": "",

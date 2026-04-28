@@ -2,7 +2,7 @@
     "firstRun": false,
     "accountStorage": {
         "__migrated": "1",
-        "LNavOpened": "true",
+        "LNavOpened": "false",
         "LNavLockOn": "false",
         "NavOpened": "true",
         "StoryStringValidationCache": "{\"hashCache\":{\"7241261575272609\":{\"fieldsWarned\":{}},\"3090278210222208\":{\"fieldsWarned\":{}}}}",
@@ -1541,7 +1541,7 @@
                     },
                     {
                         "identifier": "chatHistory",
-                        "enabled": true
+                        "enabled": false
                     },
                     {
                         "identifier": "1aeb4523-d783-4b81-9864-161f576773ce",
@@ -1704,7 +1704,7 @@
         "nanogpt_model": "gpt-4o-mini",
         "deepseek_model": "deepseek-v4-pro",
         "opencode_model": "glm-5.1",
-        "nvidia_model": "deepseek-ai/deepseek-v4-pro",
+        "nvidia_model": "deepseek-ai/deepseek-v4-flash",
         "aimlapi_model": "gpt-4o-mini-2024-07-18",
         "xai_model": "grok-3-beta",
         "pollinations_model": "openai",
@@ -1717,8 +1717,8 @@
         "azure_deployment_name": "",
         "azure_api_version": "2024-02-15-preview",
         "azure_openai_model": "",
-        "custom_model": "claude-4.7-opus",
-        "custom_url": "https://proxy.csluoyu.ggff.net/v1",
+        "custom_model": "[次]gpt-5.5",
+        "custom_url": "https://www.xiguaai6.com/v1",
         "custom_endpoint_presets": [
             {
                 "name": "None",
