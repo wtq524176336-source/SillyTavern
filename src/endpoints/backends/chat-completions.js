@@ -113,7 +113,7 @@ function isNvidiaModelAllowed(model) {
 
 /**
  * Claude Code 2.1.76 style model defaults.
- * Opus 4.6 supports 128k output, Sonnet 4.6 supports 64k output.
+ * Opus 4.6+ supports 128k output, Sonnet 4.6 supports 64k output.
  * Unknown models keep the caller-provided max_tokens.
  * @param {string} model
  * @param {number} requestedMaxTokens
@@ -126,7 +126,7 @@ function getClaudeCodeMaxTokens(model, requestedMaxTokens) {
     /** @type {{ default: number, upperLimit: number }} */
     let config = { default: requested, upperLimit: requested };
 
-    if (/claude-opus-4-6/.test(model)) {
+    if (/claude-opus-4-[678]/.test(model)) {
         config = { default: 32000, upperLimit: 32000 };
     } else if (/claude-sonnet-4-6/.test(model) || /claude-haiku-4-5/.test(model)) {
         config = { default: 32000, upperLimit: 32000 };
@@ -167,7 +167,7 @@ function getClaudeCodeEffort(model, requestedEffort) {
         return undefined;
     }
 
-    if (effort === 'max' && !/claude-opus-4-6/.test(model)) {
+    if (effort === 'max' && !/claude-(opus-4-[678]|sonnet-4-6)/.test(model)) {
         return 'high';
     }
 
@@ -411,7 +411,7 @@ async function sendClaudeRequest(request, response) {
         const supportsThinking = /^claude-(3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5)/.test(claudeModel);
         const useThinking = request.body.include_reasoning !== false && supportsThinking;
         const adaptiveThinking = useThinking
-            && /^claude-(opus-4-6|sonnet-4-6)/.test(claudeModel)
+            && /^claude-(opus-4-[678]|sonnet-4-6)/.test(claudeModel)
             && !isTruthyEnv(process.env.CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING);
 
         if (adaptiveThinking) {
