@@ -247,8 +247,8 @@ export const reasoning_effort_types = {
 const DEEPSEEK_MODELS = ['deepseek-v4-flash', 'deepseek-v4-pro'];
 const DEEPSEEK_DEFAULT_MODEL = DEEPSEEK_MODELS[0];
 const DEEPSEEK_REASONING_EFFORTS = [reasoning_effort_types.high, reasoning_effort_types.max];
-const OPENCODE_OPENAI_MODELS = ['glm-5.1', 'glm-5', 'kimi-k2.5', 'kimi-k2.6', 'mimo-v2-pro', 'mimo-v2-omni', 'mimo-v2.5-pro', 'mimo-v2.5', 'qwen3.5-plus', 'qwen3.6-plus', 'deepseek-v4-pro', 'deepseek-v4-flash'];
-const OPENCODE_ANTHROPIC_MODELS = ['minimax-m2.7', 'minimax-m2.5'];
+const OPENCODE_OPENAI_MODELS = ['glm-5.1', 'glm-5', 'kimi-k2.5', 'kimi-k2.6', 'mimo-v2-pro', 'mimo-v2-omni', 'mimo-v2.5-pro', 'mimo-v2.5', 'qwen3.5-plus', 'deepseek-v4-pro', 'deepseek-v4-flash'];
+const OPENCODE_ANTHROPIC_MODELS = ['minimax-m3', 'minimax-m2.7', 'minimax-m2.5', 'qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-plus'];
 const OPENCODE_MODELS = [...OPENCODE_OPENAI_MODELS, ...OPENCODE_ANTHROPIC_MODELS];
 const OPENCODE_DEFAULT_MODEL = OPENCODE_MODELS[0];
 const NVIDIA_DEFAULT_MODEL = 'deepseek-ai/deepseek-v4-pro';
@@ -1716,7 +1716,7 @@ export function getChatCompletionModel(settings = null) {
         case chat_completion_sources.DEEPSEEK:
             return normalizeDeepSeekModel(settings.deepseek_model);
         case chat_completion_sources.OPENCODE:
-            return OPENCODE_MODELS.includes(settings.opencode_model) ? settings.opencode_model : OPENCODE_DEFAULT_MODEL;
+            return settings.opencode_model || OPENCODE_DEFAULT_MODEL;
         case chat_completion_sources.NVIDIA:
             return settings.nvidia_model || NVIDIA_DEFAULT_MODEL;
         case chat_completion_sources.AIMLAPI:
@@ -2086,6 +2086,24 @@ function saveModelList(data) {
         oai_settings.deepseek_model = normalizeDeepSeekModel(oai_settings.deepseek_model);
 
         $('#model_deepseek_select').val(oai_settings.deepseek_model).trigger('change');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.OPENCODE) {
+        $('#model_opencode_select').empty();
+        model_list.forEach((model) => {
+            $('#model_opencode_select').append(
+                $('<option>', {
+                    value: model.id,
+                    text: model.id,
+                }));
+        });
+
+        const selectedModel = model_list.find(model => model.id === oai_settings.opencode_model);
+        if (model_list.length > 0 && (!selectedModel || !oai_settings.opencode_model)) {
+            oai_settings.opencode_model = model_list[0].id;
+        }
+
+        $('#model_opencode_select').val(oai_settings.opencode_model).trigger('change');
     }
 
     if (oai_settings.chat_completion_source == chat_completion_sources.NVIDIA) {
@@ -4222,7 +4240,6 @@ async function getStatusOpen() {
         chat_completion_sources.VERTEXAI,
         chat_completion_sources.PERPLEXITY,
         chat_completion_sources.ZAI,
-        chat_completion_sources.OPENCODE,
     ];
     if (noValidateSources.includes(oai_settings.chat_completion_source)) {
         let status = t`Key saved; press \"Test Message\" to verify.`;
@@ -5259,9 +5276,9 @@ async function onModelChange() {
     }
 
     if ($(this).is('#model_opencode_select')) {
-        if (!OPENCODE_MODELS.includes(value)) {
-            value = OPENCODE_DEFAULT_MODEL;
-            $('#model_opencode_select').val(value);
+        if (!value || !hasModelsLoaded) {
+            console.debug('Null OpenCode Go model selected. Ignoring.');
+            return;
         }
 
         console.log('OpenCode Go model changed to', value);

@@ -95,7 +95,7 @@ const CLAUDE_CODE_BETA_HEADERS = [
     'interleaved-thinking-2025-05-14',
     'context-management-2025-06-27',
 ];
-const OPENCODE_ANTHROPIC_MODELS = ['minimax-m2.7', 'minimax-m2.5'];
+const OPENCODE_ANTHROPIC_MODELS = ['minimax-m3', 'minimax-m2.7', 'minimax-m2.5', 'qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-plus'];
 const DEFAULT_NVIDIA_API_KEY = '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';
 const NVIDIA_FILTERED_MODEL_PREFIXES = ['01-ai/', 'abacusai/', 'adept/', 'ai21labs/', 'aisingapore/', 'baai/', 'bigcode/', 'bytedance/', 'databricks/', 'google/', 'ibm/', 'meta/', 'microsoft/', 'mistralai/', 'nv-mistralai/', 'nvidia/', 'openai/', 'sarvamai/', 'snowflake/', 'stockmark/', 'upstage/', 'writer/', 'zyphra/'];
 
@@ -105,6 +105,45 @@ const NVIDIA_FILTERED_MODEL_PREFIXES = ['01-ai/', 'abacusai/', 'adept/', 'ai21la
  */
 function isOpenCodeAnthropicModel(model) {
     return OPENCODE_ANTHROPIC_MODELS.includes(model);
+}
+
+/**
+ * @param {Array<{type?: string, text?: string, cache_control?: {type: string, ttl?: string}}>} systemPrompt
+ * @param {string} ttl
+ */
+function cacheOpenCodeGoSystemPrompt(systemPrompt, ttl) {
+    if (!Array.isArray(systemPrompt) || !systemPrompt.length) {
+        return;
+    }
+
+    for (let i = systemPrompt.length - 1; i >= 0; i--) {
+        if (systemPrompt[i]?.type === 'text') {
+            systemPrompt[i].cache_control = { type: 'ephemeral', ttl };
+            return;
+        }
+    }
+}
+
+/**
+ * DeepSeek official API enables context caching automatically. Normalize its
+ * cache hit counter into the common OpenAI usage details shape for consumers.
+ * @param {any} responseJson
+ */
+function normalizeDeepSeekCacheUsage(responseJson) {
+    const usage = responseJson?.usage;
+    if (!usage || typeof usage !== 'object') {
+        return;
+    }
+
+    const cachedTokens = Number(usage.prompt_cache_hit_tokens || 0);
+    if (!Number.isFinite(cachedTokens) || cachedTokens <= 0) {
+        return;
+    }
+
+    usage.prompt_tokens_details = {
+        ...usage.prompt_tokens_details,
+        cached_tokens: cachedTokens,
+    };
 }
 
 function isNvidiaModelAllowed(model) {
@@ -1154,6 +1193,13 @@ async function sendOpenCodeGoRequest(request, response) {
     try {
         if (isOpenCodeAnthropicModel(request.body.model)) {
             const convertedPrompt = convertClaudeMessages(request.body.messages, '', true, false, getPromptNames(request));
+            if ((enablePromptCache || enableSystemPromptCache) && convertedPrompt.systemPrompt.length) {
+                cacheOpenCodeGoSystemPrompt(convertedPrompt.systemPrompt, cacheTTL);
+            }
+            if (!enablePromptCache && cachingAtDepth !== -1) {
+                cachingAtDepthForClaude(convertedPrompt.messages, cachingAtDepth, cacheTTL);
+            }
+
             const requestBody = {
                 messages: convertedPrompt.messages,
                 model: request.body.model,
@@ -1320,6 +1366,7 @@ async function sendDeepSeekRequest(request, response) {
                 type: request.body.include_reasoning ? 'enabled' : 'disabled',
             },
             'reasoning_effort': request.body.reasoning_effort || 'high',
+            'stream_options': request.body.stream ? { include_usage: true } : undefined,
             ...bodyParams,
         };
 
@@ -1347,6 +1394,7 @@ async function sendDeepSeekRequest(request, response) {
                 return response.status(500).send(errorJson);
             }
             const generateResponseJson = await generateResponse.json();
+            normalizeDeepSeekCacheUsage(generateResponseJson);
             console.debug('DeepSeek response:', generateResponseJson);
             return response.send(generateResponseJson);
         }
@@ -1940,6 +1988,10 @@ router.post('/status', async function (request, statusResponse) {
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.DEEPSEEK) {
             apiUrl = new URL(request.body.reverse_proxy || API_DEEPSEEK).toString();
             apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.DEEPSEEK);
+            headers = {};
+        } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.OPENCODE) {
+            apiUrl = API_OPENCODE_GO;
+            apiKey = readSecret(request.user.directories, SECRET_KEYS.OPENCODE);
             headers = {};
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.NVIDIA) {
             apiUrl = API_NVIDIA;
