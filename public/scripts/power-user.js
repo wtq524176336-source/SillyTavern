@@ -1789,6 +1789,7 @@ export async function loadPowerUserSettings(settings, data) {
     $('#streaming_fps').val(power_user.streaming_fps);
     $('#streaming_fps_counter').val(power_user.streaming_fps);
 
+    power_user.smooth_streaming = false;
     $('#smooth_streaming').prop('checked', power_user.smooth_streaming);
     $('#smooth_streaming_no_think').prop('checked', power_user.smooth_streaming_no_think);
     $('#smooth_streaming_speed').val(power_user.smooth_streaming_speed);
@@ -3592,7 +3593,9 @@ jQuery(() => {
     });
 
     $('#smooth_streaming').on('input', function () {
-        power_user.smooth_streaming = !!$(this).prop('checked');
+        // 强制关闭前端假打字机效果，保留后端真流式输出。
+        power_user.smooth_streaming = false;
+        $(this).prop('checked', false);
         saveSettingsDebounced();
     });
 

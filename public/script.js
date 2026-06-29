@@ -161,7 +161,6 @@ import {
     onlyUnique,
     getBase64Async,
     humanFileSize,
-    Stopwatch,
     isValidUrl,
     ensureImageFormatSupported,
     flashHighlight,
@@ -3778,7 +3777,6 @@ class StreamingProcessor {
         this.stoppingStrings = getStoppingStrings(isImpersonate, isContinue);
 
         try {
-            const sw = new Stopwatch(1000 / power_user.streaming_fps);
             const timestamps = [];
             for await (const { text, swipes, logprobs, toolCalls, state } of this.generator()) {
                 const now = Date.now();
@@ -3801,7 +3799,8 @@ class StreamingProcessor {
                 this.images = state?.images ?? [];
                 this.reasoningSignature = state?.signature ?? null;
                 await eventSource.emit(event_types.STREAM_TOKEN_RECEIVED, text);
-                await sw.tick(async () => await this.onProgressStreaming(this.messageId, this.continueMessage + text));
+                // Render every real streamed chunk immediately instead of holding it for a later chunk.
+                await this.onProgressStreaming(this.messageId, this.continueMessage + text);
             }
             const seconds = (timestamps[timestamps.length - 1] - timestamps[0]) / 1000;
             console.warn(`Stream stats: ${timestamps.length} tokens, ${seconds.toFixed(2)} seconds, rate: ${Number(timestamps.length / seconds).toFixed(2)} TPS`);

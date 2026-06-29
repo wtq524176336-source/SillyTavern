@@ -350,10 +350,10 @@ async function checkChatIntegrity(filePath, integritySlug) {
  * @param {string} pathToFile - Path to the chat file
  * @param {object} additionalData - Additional data to include in the result
  * @param {boolean} withMetadata - Whether to read chat metadata
- * @param {boolean} useFirstUserMessage - Whether to use the first user message as preview text
+ * @param {boolean} useFirstMessage - Whether to use the first chat message as preview text
  * @returns {Promise<ChatInfo>}
  */
-export async function getChatInfo(pathToFile, additionalData = {}, withMetadata = false, useFirstUserMessage = false) {
+export async function getChatInfo(pathToFile, additionalData = {}, withMetadata = false, useFirstMessage = false) {
     return new Promise(async (res) => {
         const parsedPath = path.parse(pathToFile);
         const stats = await fs.promises.stat(pathToFile);
@@ -381,7 +381,7 @@ export async function getChatInfo(pathToFile, additionalData = {}, withMetadata 
 
         let lastLine;
         let itemCounter = 0;
-        let firstUserMessage = '';
+        let firstMessage = '';
         rl.on('line', (line) => {
             if (withMetadata && itemCounter === 0) {
                 const jsonData = tryParse(line);
@@ -390,10 +390,10 @@ export async function getChatInfo(pathToFile, additionalData = {}, withMetadata 
                 }
             }
 
-            if (useFirstUserMessage && !firstUserMessage) {
+            if (useFirstMessage && itemCounter > 0 && !firstMessage) {
                 const jsonData = tryParse(line);
-                if (jsonData?.is_user && typeof jsonData?.mes === 'string') {
-                    firstUserMessage = jsonData.mes;
+                if (typeof jsonData?.mes === 'string') {
+                    firstMessage = jsonData.mes;
                 }
             }
 
@@ -407,7 +407,7 @@ export async function getChatInfo(pathToFile, additionalData = {}, withMetadata 
                 const jsonData = tryParse(lastLine);
                 if (jsonData && (jsonData.name || jsonData.character_name || jsonData.chat_metadata)) {
                     chatData.chat_items = (itemCounter - 1);
-                    chatData.mes = useFirstUserMessage ? (firstUserMessage || jsonData['mes'] || '[The message is empty]') : (jsonData['mes'] || '[The message is empty]');
+                    chatData.mes = useFirstMessage ? (firstMessage || jsonData['mes'] || '[The message is empty]') : (jsonData['mes'] || '[The message is empty]');
                     chatData.last_mes = jsonData['send_date'] || new Date(Math.round(stats.mtimeMs)).toISOString();
 
                     res(chatData);

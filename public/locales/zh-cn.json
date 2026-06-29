@@ -36,6 +36,7 @@
     "Instruct": "指导",
     "Prose Augmenter": "散文增强器",
     "Text Adventure": "文字冒险",
+    "Allow omitting sampler parameters": "允许不传",
     "Temperature": "温度",
     "rep.pen": "重复惩罚",
     "Rep. Pen. Range.": "重复惩罚范围。",

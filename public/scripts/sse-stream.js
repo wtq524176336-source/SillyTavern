@@ -390,11 +390,11 @@ export class SmoothEventSourceStream extends EventSourceStream {
     }
 }
 
+/**
+ * Gets the SSE stream parser without artificial typewriter-style delays.
+ * @returns {EventSourceStream} Plain event source stream parser.
+ */
 export function getEventSourceStream() {
-    if (power_user.smooth_streaming) {
-        return new SmoothEventSourceStream();
-    }
-
     return new EventSourceStream();
 }
 

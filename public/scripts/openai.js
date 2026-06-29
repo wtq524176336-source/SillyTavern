@@ -288,6 +288,7 @@ export const settingsToUpdate = {
     frequency_penalty: ['#freq_pen_openai', 'freq_pen_openai', false, false],
     presence_penalty: ['#pres_pen_openai', 'pres_pen_openai', false, false],
     top_p: ['#top_p_openai', 'top_p_openai', false, false],
+    omit_sampling_parameters: ['#omit_sampling_parameters_openai', 'omit_sampling_parameters_openai', true, false],
     top_k: ['#top_k_openai', 'top_k_openai', false, false],
     top_a: ['#top_a_openai', 'top_a_openai', false, false],
     min_p: ['#min_p_openai', 'min_p_openai', false, false],
@@ -388,6 +389,7 @@ const default_settings = {
     freq_pen_openai: 0,
     pres_pen_openai: 0,
     top_p_openai: 1.0,
+    omit_sampling_parameters_openai: false,
     top_k_openai: 0,
     min_p_openai: 0,
     top_a_openai: 0,
@@ -410,7 +412,7 @@ const default_settings = {
     scenario_format: default_scenario_format,
     personality_format: default_personality_format,
     openai_model: 'gpt-4-turbo',
-    claude_model: 'claude-sonnet-4-5',
+    claude_model: 'claude-sonnet-4-6',
     google_model: 'gemini-2.5-pro',
     vertexai_model: 'gemini-2.5-pro',
     ai21_model: 'jamba-large',
@@ -2920,6 +2922,14 @@ export async function createGenerationParameters(settings, model, type, messages
         }
     }
 
+    // 允许用户让后端请求体完全不携带基础采样参数。
+    if (settings.omit_sampling_parameters_openai) {
+        delete generate_data.temperature;
+        delete generate_data.frequency_penalty;
+        delete generate_data.presence_penalty;
+        delete generate_data.top_p;
+    }
+
     if (jsonSchema) {
         generate_data.json_schema = jsonSchema;
     }
@@ -4088,6 +4098,7 @@ function migrateChatCompletionSettings(settings) {
             }
         }
     }
+    settings.omit_sampling_parameters ??= false;
 }
 
 /**
@@ -6654,6 +6665,12 @@ export function initOpenAI() {
     $('#top_p_openai').on('input', function () {
         oai_settings.top_p_openai = Number($(this).val());
         $('#top_p_counter_openai').val(Number($(this).val()).toFixed(2));
+        saveSettingsDebounced();
+    });
+
+    // 保存“允许不传”开关，发送请求时按该值删除采样参数。
+    $('#omit_sampling_parameters_openai').on('input', function () {
+        oai_settings.omit_sampling_parameters_openai = !!$(this).prop('checked');
         saveSettingsDebounced();
     });
 
